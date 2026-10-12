@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Configuración de la suite de pruebas de usabilidad (una prueba por historia
+    de usuario). A diferencia de phpunit.xml, esta suite corre contra una COPIA
+    de la base de datos real (semilleros_db_test) para validar el sistema con
+    datos verdaderos. Nunca apunta a semilleros_db: la clase base aborta si el
+    nombre de la base no termina en «_test».
+
+    Para regenerar la copia de pruebas se usa el guion:
+      bash scripts/preparar-base-pruebas.sh
+
+    Ejecutar la suite:
+      php vendor/bin/phpunit -c phpunit.usabilidad.xml
+-->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="Usabilidad">
+            <directory>tests/Usabilidad</directory>
+        </testsuite>
+    </testsuites>
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <env name="BCRYPT_ROUNDS" value="4"/>
+        <env name="CACHE_STORE" value="array"/>
+        <env name="DB_CONNECTION" value="mysql"/>
+        <env name="DB_DATABASE" value="semilleros_db_test"/>
+        <env name="MAIL_MAILER" value="array"/>
+        <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="SESSION_DRIVER" value="array"/>
+    </php>
+</phpunit>

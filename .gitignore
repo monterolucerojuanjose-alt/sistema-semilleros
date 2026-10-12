@@ -1,0 +1,39 @@
+# Dependencias y compilados
+/vendor
+/node_modules
+/public/build
+/public/hot
+/public/storage
+
+# Configuración local y credenciales
+.env
+.env.backup
+.env.production
+auth.json
+/storage/*.key
+
+# Archivos subidos por los usuarios y generados por la aplicación
+/storage/app/certificados
+
+# Respaldos locales de la base de datos y del código (contienen datos reales)
+/backups
+
+# Pruebas
+/.phpunit.cache
+.phpunit.result.cache
+
+# Registros
+*.log
+npm-debug.log
+yarn-error.log
+
+# Editores, herramientas locales y sistema operativo
+/.claude
+/.fleet
+/.idea
+/.vscode
+Homestead.json
+Homestead.yaml
+.DS_Store
+Thumbs.db
+*.swp
