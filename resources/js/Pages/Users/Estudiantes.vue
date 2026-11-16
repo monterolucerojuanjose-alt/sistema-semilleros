@@ -7,7 +7,7 @@
                 </h2>
                 <div class="flex items-center space-x-2">
                     <span class="bg-blue-100 text-blue-800 text-sm font-medium px-2.5 py-0.5 rounded-full">
-                        {{ estudiantes.length }} estudiantes
+                        {{ estudiantes.length }} {{ estudiantes.length === 1 ? 'estudiante' : 'estudiantes' }}
                     </span>
                 </div>
             </div>
@@ -124,8 +124,10 @@
                                 :key="estudiante.id"
                                 class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow duration-200"
                             >
-                                <div class="flex items-center justify-between mb-4">
-                                    <div class="flex items-center">
+                                <!-- En celular las insignias bajan bajo el nombre en lugar
+                                     de salirse por la derecha de la tarjeta. -->
+                                <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div class="flex min-w-0 items-center">
                                         <div class="flex-shrink-0">
                                             <div class="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
                                                 <span class="text-blue-600 font-semibold text-lg">
@@ -133,21 +135,21 @@
                                                 </span>
                                             </div>
                                         </div>
-                                        <div class="ml-4">
-                                            <h3 class="text-lg font-semibold text-gray-900">
+                                        <div class="ml-4 min-w-0">
+                                            <h3 class="break-words text-lg font-semibold text-gray-900">
                                                 {{ estudiante.name }}
                                             </h3>
-                                            <p class="text-sm text-gray-600">
+                                            <p class="truncate text-sm text-gray-600">
                                                 {{ estudiante.email }}
                                             </p>
                                         </div>
                                     </div>
-                                    <div class="flex items-center space-x-2">
+                                    <div class="flex flex-wrap items-center gap-2">
                                         <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                                            {{ estudiante.proyectos_count }} proyectos
+                                            {{ estudiante.proyectos_count }} {{ estudiante.proyectos_count === 1 ? 'proyecto' : 'proyectos' }}
                                         </span>
                                         <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                            {{ estudiante.semilleros.length }} semilleros
+                                            {{ estudiante.semilleros.length }} {{ estudiante.semilleros.length === 1 ? 'semillero' : 'semilleros' }}
                                         </span>
                                     </div>
                                 </div>

@@ -163,8 +163,8 @@
                     </div>
                     <div class="mt-4 flex items-center justify-between gap-3">
                         <p class="text-xs text-gray-500">
-                            <span v-if="hayFiltros">Filtros aplicados sobre {{ auditorias.total }} registros</span>
-                            <span v-else>{{ auditorias.total }} registros en total</span>
+                            <span v-if="hayFiltros">Filtros aplicados sobre {{ auditorias.total }} {{ auditorias.total === 1 ? 'registro' : 'registros' }}</span>
+                            <span v-else>{{ auditorias.total }} {{ auditorias.total === 1 ? 'registro' : 'registros' }} en total</span>
                         </p>
                         <div class="flex gap-2">
                             <button type="button" @click="limpiarFiltros"
@@ -334,7 +334,7 @@
 
                     <div v-if="cambios.length">
                         <p class="mb-2 text-xs font-medium text-gray-500">Campos modificados</p>
-                        <div class="overflow-hidden rounded-lg border border-gray-200">
+                        <div class="overflow-x-auto rounded-lg border border-gray-200">
                             <table class="min-w-full divide-y divide-gray-200 text-sm">
                                 <thead class="bg-gray-50">
                                     <tr>

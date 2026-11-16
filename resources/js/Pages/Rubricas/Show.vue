@@ -253,6 +253,7 @@
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
+import { nivelNota } from '@/utils/notas';
 
 const props = defineProps({
     rubrica: Object,
@@ -279,12 +280,8 @@ const formatNota = (nota) => {
         : valor.toFixed(2);
 };
 
-const getNotaBadgeClass = (nota) => {
-    if (nota >= 90) return "bg-green-100 text-green-800";
-    if (nota >= 80) return "bg-blue-100 text-blue-800";
-    if (nota >= 60) return "bg-yellow-100 text-yellow-800";
-    return 'bg-red-100 text-red-800';
-};
+// Escala única del sistema (ver utils/notas.js).
+const getNotaBadgeClass = (nota) => nivelNota(nota).insignia;
 
 const formatDate = (date) => {
     return new Date(date).toLocaleDateString('es-ES', {

@@ -249,12 +249,13 @@ class InscripcionEventoController extends Controller
             }
         }
 
-        $inscripcion->load(['proyecto.autor', 'proyecto.semillero']);
+        $inscripcion->load(['proyecto.autor', 'proyecto.semillero', 'evento:id,titulo']);
 
         // Generar PDF
         $pdf = Pdf::loadView('inscripciones.comprobante', [
             'inscripcion' => $inscripcion,
-            'fecha_generacion' => now()->format('d/m/Y H:i:s')
+            'logo' => \App\Support\RecursosPdf::logo(),
+            'fecha_generacion' => now()->format('d/m/Y \a \l\a\s H:i'),
         ]);
 
         $nombreArchivo = 'Comprobante_Inscripcion_' . $inscripcion->codigo_inscripcion . '.pdf';

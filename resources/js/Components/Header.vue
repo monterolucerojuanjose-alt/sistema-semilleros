@@ -180,7 +180,10 @@ onUnmounted(() => {
 
             <div class="flex items-center gap-1">
                 <!-- Notificaciones: disponible para todos los roles desde cualquier pantalla -->
-                <div class="relative" data-desplegable>
+                <!-- En celular el contenedor no es «relative»: el panel se ancla a
+                     la cabecera y ocupa el ancho de la pantalla, en vez de salirse
+                     por la izquierda con sus 320 px fijos. -->
+                <div class="sm:relative" data-desplegable>
                     <button
                         @click="toggleNotificaciones"
                         class="relative rounded-lg p-2 text-gray-600 transition-colors duration-200 hover:bg-gray-100 hover:text-gray-900"
@@ -206,7 +209,7 @@ onUnmounted(() => {
                     >
                     <div
                         v-show="showingNotificaciones"
-                        class="absolute right-0 z-50 mt-2 w-80 origin-top-right overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl sm:w-96"
+                        class="absolute inset-x-3 top-full z-50 mt-1 origin-top-right overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-96"
                     >
                         <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3">
                             <h3 class="text-sm font-semibold text-gray-900">Notificaciones</h3>

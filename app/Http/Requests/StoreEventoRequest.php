@@ -29,22 +29,22 @@ class StoreEventoRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'titulo.required' => 'El titulo del evento es obligatorio.',
-            'descripcion.required' => 'La descripcion del evento es obligatoria.',
+            'titulo.required' => 'El título del evento es obligatorio.',
+            'descripcion.required' => 'La descripción del evento es obligatoria.',
             'precio.required' => 'El precio del evento es obligatorio.',
-            'precio.numeric' => 'El precio debe ser un numero valido.',
+            'precio.numeric' => 'El precio debe ser un número válido.',
             'precio.min' => 'El precio no puede ser negativo.',
             'fecha_inicio.required' => 'La fecha de inicio es obligatoria.',
-            'fecha_inicio.date' => 'La fecha de inicio debe ser una fecha valida.',
-            'fecha_fin.date' => 'La fecha de fin debe ser una fecha valida.',
+            'fecha_inicio.date' => 'La fecha de inicio no es una fecha válida.',
+            'fecha_fin.date' => 'La fecha de fin no es una fecha válida.',
             'fecha_fin.after_or_equal' => 'La fecha de fin debe ser posterior o igual a la fecha de inicio.',
-            'cupo_maximo.integer' => 'El cupo maximo debe ser un numero entero.',
-            'cupo_maximo.min' => 'El cupo maximo debe ser mayor a 0.',
+            'cupo_maximo.integer' => 'El cupo máximo debe ser un número entero.',
+            'cupo_maximo.min' => 'El cupo máximo debe ser mayor que 0.',
             'estado.required' => 'El estado del evento es obligatorio.',
             'estado.in' => 'El estado debe ser: activo, inactivo o finalizado.',
-            'imagen.image' => 'El archivo debe ser una imagen valida.',
-            'imagen.mimes' => 'La imagen debe ser de tipo: jpeg, jpg, png o webp.',
-            'imagen.max' => 'La imagen no puede pesar mas de 5MB.',
+            'imagen.image' => 'El archivo debe ser una imagen válida.',
+            'imagen.mimes' => 'La imagen debe ser JPG, PNG o WEBP.',
+            'imagen.max' => 'La imagen no puede pesar más de 5 MB.',
         ];
     }
 }

@@ -7,8 +7,8 @@
                 <div class="mb-8">
                     <div class="flex items-center justify-between">
                         <div>
-                            <h1 class="text-3xl font-bold text-gray-900">Gestion de Proyectos</h1>
-                            <p class="mt-2 text-gray-600">Administra y revisa los proyectos de investigacion</p>
+                            <h1 class="text-3xl font-bold text-gray-900">Gestión de proyectos</h1>
+                            <p class="mt-2 text-gray-600">Administra y revisa los proyectos de investigación</p>
                         </div>
                         <div class="flex space-x-3">
                             <Link
@@ -54,7 +54,7 @@
                 </div>
 
                 <p v-if="resumen?.autores" class="mb-4 text-sm text-gray-500">
-                    {{ resumen.total }} proyectos de {{ resumen.autores }}
+                    {{ resumen.total }} {{ resumen.total === 1 ? 'proyecto' : 'proyectos' }} de {{ resumen.autores }}
                     {{ resumen.autores === 1 ? 'estudiante' : 'estudiantes' }}.
                 </p>
 
@@ -65,7 +65,7 @@
                             <input
                                 v-model="filters.search"
                                 type="text"
-                                placeholder="Buscar por titulo, resumen o autor..."
+                                placeholder="Buscar por título, resumen o autor…"
                                 class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
@@ -189,7 +189,7 @@
                     </div>
                 </div>
 
-                <div v-if="filteredProyectos.length > 0 && vista === 'tarjetas'" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <div v-if="filteredProyectos.length > 0 && vista === 'tarjetas'" class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                     <div
                         v-for="proyecto in filteredProyectos"
                         :key="proyecto.id"
@@ -197,7 +197,7 @@
                     >
                         <div class="p-6">
                             <div class="mb-4 flex items-start justify-between">
-                                <div class="flex-1">
+                                <div class="min-w-0 flex-1">
                                     <h3 class="line-clamp-2 text-lg font-semibold text-gray-900 transition-colors duration-200 group-hover:text-blue-600">
                                         {{ proyecto.titulo }}
                                     </h3>
@@ -490,7 +490,7 @@ const canDelete = (proyecto) => {
 };
 
 const confirmDeleteProject = (proyectoId, titulo) => {
-    if (confirm(`¿Estas seguro de que quieres eliminar el proyecto "${titulo}"?\n\nEsta accion no se puede deshacer y eliminara todas las versiones del proyecto.`)) {
+    if (confirm(`¿Estás seguro de que quieres eliminar el proyecto «${titulo}»?\n\nEsta acción no se puede deshacer y eliminará todas las versiones del proyecto.`)) {
         deleteProject(proyectoId);
     }
 };

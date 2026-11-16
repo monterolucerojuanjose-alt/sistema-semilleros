@@ -314,10 +314,13 @@ class EstudianteTest extends UsabilidadTestCase
         $this->assertNotNull($promedio, 'HU-35: no se calculó el promedio.');
         $this->assertLessThanOrEqual(100, $promedio, 'HU-35: el promedio supera el máximo de 100.0.');
 
-        // Y puede abrir el detalle de una evaluación de evento.
-        $conDetalle = collect($props['evaluadas'])->firstWhere('detalle_id', '!=', null);
-        if ($conDetalle) {
-            $this->abrirPagina($estudiante, "/mis-notas/{$conDetalle['detalle_id']}", 'HU-35');
+        // Toda nota publicada, sea de evento o de proyecto de semillero, tiene
+        // su ficha de detalle y abre sin errores.
+        foreach ($props['evaluadas'] as $nota) {
+            $this->assertNotEmpty($nota['detalle_url'], "HU-35: la nota «{$nota['titulo']}» no tiene ficha de detalle.");
+
+            $detalle = $this->abrirPagina($estudiante, parse_url($nota['detalle_url'], PHP_URL_PATH), 'HU-35');
+            $this->assertEqualsWithDelta($nota['nota'], $detalle['nota']['nota'], 0.01, 'HU-35: el detalle no muestra la misma nota que el listado.');
         }
     }
 

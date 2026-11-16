@@ -93,7 +93,7 @@
                                 <input
                                     v-model="filters.search"
                                     type="text"
-                                    placeholder="Nombre o email del estudiante"
+                                    placeholder="Nombre o correo del estudiante"
                                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>

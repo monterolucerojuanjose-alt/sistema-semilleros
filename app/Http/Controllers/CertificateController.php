@@ -5,8 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Certificate;
 use App\Models\User;
 use App\Models\Evento;
+use App\Support\RecursosPdf;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -17,51 +21,49 @@ class CertificateController extends Controller
         $this->middleware('auth');
     }
 
+    /** Administrador y Coordinador gestionan todos los certificados. */
+    private function esGestor(): bool
+    {
+        return auth()->user()->hasAnyRole(['Administrador', 'Coordinador']);
+    }
+
     /**
      * Muestra el listado de registros.
      */
     public function index(Request $request): Response
     {
         $user = auth()->user();
-
-        // Obtener filtros de la request
         $filtros = $request->only(['buscar', 'tipo', 'estado', 'fecha_inicio', 'fecha_fin']);
 
-        // Construir query base
-        $query = Certificate::with(['usuario', 'evento', 'emisor']);
+        // «mis-certificados» siempre muestra sólo los propios, también a un
+        // gestor; «certificados» muestra todos a los gestores.
+        $routeName = $request->route()?->getName() ?? 'certificados.index';
+        $soloPropios = $routeName === 'mis-certificados' || !$this->esGestor();
 
-        // Aplicar filtros según el rol del usuario
-        if ($user->hasRole(['Administrador', 'Coordinador'])) {
-            // Administradores y coordinadores ven todos los certificados
-            $query->buscar($filtros['buscar'] ?? '')
-                  ->porTipo($filtros['tipo'] ?? '')
-                  ->porEstado($filtros['estado'] ?? '')
-                  ->porFecha($filtros['fecha_inicio'] ?? null, $filtros['fecha_fin'] ?? null);
-        } else {
-            // Estudiantes ven solo sus certificados
-            $query->porUsuario($user->id)
-                  ->buscar($filtros['buscar'] ?? '')
-                  ->porTipo($filtros['tipo'] ?? '')
-                  ->porEstado($filtros['estado'] ?? '')
-                  ->porFecha($filtros['fecha_inicio'] ?? null, $filtros['fecha_fin'] ?? null);
-        }
+        $query = Certificate::with(['usuario:id,name,email', 'evento:id,titulo', 'emisor:id,name'])
+            ->when($soloPropios, fn ($q) => $q->porUsuario($user->id))
+            ->buscar($filtros['buscar'] ?? '')
+            ->porTipo($filtros['tipo'] ?? '')
+            ->porEstado($filtros['estado'] ?? '')
+            ->porFecha($filtros['fecha_inicio'] ?? null, $filtros['fecha_fin'] ?? null);
 
-        // Ordenar y paginar
-        $certificados = $query->orderBy('fecha_emision', 'desc')->paginate(15);
+        // Totales del encabezado, sobre el mismo universo que ve el usuario.
+        $base = Certificate::query()->when($soloPropios, fn ($q) => $q->porUsuario($user->id));
+        $resumen = [
+            'total' => (clone $base)->count(),
+            'vigentes' => (clone $base)->where('estado', 'activo')->count(),
+            'revocados' => (clone $base)->where('estado', 'revocado')->count(),
+            'este_anio' => (clone $base)->whereYear('fecha_emision', now()->year)->count(),
+        ];
 
-        // Obtener datos adicionales para los filtros
-        $tipos = ['participacion', 'ponencia', 'poster', 'organizacion', 'voluntariado'];
-        $estados = ['activo', 'revocado'];
+        $certificados = $query->orderBy('fecha_emision', 'desc')->orderByDesc('id')->paginate(15)->withQueryString();
 
-        // Determinar qué vista usar según la ruta
-        $routeName = request()->route() ? request()->route()->getName() : 'certificados.index';
-        $viewName = $routeName === 'mis-certificados' ? 'Certificados/MisCertificados' : 'Certificados/Index';
-
-        return Inertia::render($viewName, [
+        return Inertia::render($routeName === 'mis-certificados' ? 'Certificados/MisCertificados' : 'Certificados/Index', [
             'certificados' => $certificados,
-            'tipos' => $tipos,
-            'estados' => $estados,
+            'tipos' => Certificate::TIPOS,
+            'estados' => Certificate::ESTADOS,
             'filtros' => $filtros,
+            'resumen' => $resumen,
         ]);
     }
 
@@ -70,20 +72,12 @@ class CertificateController extends Controller
      */
     public function create(): Response
     {
-        $user = auth()->user();
-
-        // Verificar permisos
-        if (!$user->hasRole(['Administrador', 'Coordinador'])) {
-            abort(403, 'No tienes permisos para crear certificados.');
-        }
-
-        // Obtener estudiantes y eventos para el formulario
-        $estudiantes = User::role('Estudiante')->select('id', 'name', 'email')->get();
-        $eventos = Evento::activos()->select('id', 'titulo')->get();
+        abort_unless($this->esGestor(), 403, 'No tienes permisos para crear certificados.');
 
         return Inertia::render('Certificados/Create', [
-            'estudiantes' => $estudiantes,
-            'eventos' => $eventos,
+            'estudiantes' => User::role('Estudiante')->select('id', 'name', 'email')->orderBy('name')->get(),
+            'eventos' => Evento::select('id', 'titulo', 'fecha_inicio')->orderByDesc('fecha_inicio')->get(),
+            'tipos' => Certificate::TIPOS,
         ]);
     }
 
@@ -92,67 +86,29 @@ class CertificateController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $user = auth()->user();
+        abort_unless($this->esGestor(), 403, 'No tienes permisos para crear certificados.');
 
-        // Verificar permisos
-        if (!$user->hasRole(['Administrador', 'Coordinador'])) {
-            abort(403, 'No tienes permisos para crear certificados.');
-        }
+        $validated = $this->validar($request);
 
-        $validated = $request->validate([
-            'titulo' => 'required|string|max:255',
-            'descripcion' => 'nullable|string|max:1000',
-            'tipo' => 'required|in:participacion,ponencia,poster,organizacion,voluntariado',
-            'fecha_emision' => 'required|date|before_or_equal:today',
-            'user_id' => 'required|exists:users,id',
-            'evento_id' => 'nullable|exists:eventos,id',
-            'metadata' => 'nullable|array',
-            'observaciones' => 'nullable|string|max:1000',
-            'archivo_certificado' => 'nullable|file|mimes:pdf|max:10240', // 10MB máximo
-        ], [
-            'titulo.required' => 'El título del certificado es obligatorio.',
-            'tipo.required' => 'El tipo de certificado es obligatorio.',
-            'fecha_emision.required' => 'La fecha de emisión es obligatoria.',
-            'fecha_emision.before_or_equal' => 'La fecha de emisión no puede ser futura.',
-            'user_id.required' => 'Debes seleccionar un estudiante.',
-            'user_id.exists' => 'El estudiante seleccionado no existe.',
-            'evento_id.exists' => 'El evento seleccionado no existe.',
-            'archivo_certificado.file' => 'El archivo debe ser válido.',
-            'archivo_certificado.mimes' => 'El archivo debe ser un PDF.',
-            'archivo_certificado.max' => 'El archivo no puede ser mayor a 10MB.',
-        ]);
-
-        // Manejar la subida del archivo PDF
-        $archivoPath = null;
-        if ($request->hasFile('archivo_certificado')) {
-            $archivo = $request->file('archivo_certificado');
-            $archivoPath = $archivo->store('certificados', 'public');
-        }
-
-        // Asegurar que metadata sea un array válido
-        $metadata = $validated['metadata'] ?? [];
-        if (!is_array($metadata)) {
-            $metadata = [];
-        }
-
-        // Crear el certificado
         $certificado = Certificate::create([
             'codigo' => Certificate::generarCodigo(),
             'titulo' => $validated['titulo'],
-            'descripcion' => $validated['descripcion'],
+            'descripcion' => $validated['descripcion'] ?? null,
             'tipo' => $validated['tipo'],
             'fecha_emision' => $validated['fecha_emision'],
             'user_id' => $validated['user_id'],
-            'evento_id' => $validated['evento_id'],
-            'emitido_por' => $user->id,
-            'metadata' => $metadata,
-            'observaciones' => $validated['observaciones'],
+            'evento_id' => $validated['evento_id'] ?? null,
+            'emitido_por' => auth()->id(),
+            'metadata' => $this->metadata($validated),
+            'observaciones' => $validated['observaciones'] ?? null,
             'estado' => 'activo',
-            'archivo_certificado' => $archivoPath,
+            'archivo_certificado' => $request->hasFile('archivo_certificado')
+                ? $request->file('archivo_certificado')->store('certificados', 'public')
+                : null,
         ]);
 
-        return redirect()->route('certificados.index')
-            ->with('success', 'Certificado creado exitosamente.');
+        return redirect()->route('certificados.show', $certificado)
+            ->with('success', 'Certificado emitido correctamente.');
     }
 
     /**
@@ -160,23 +116,17 @@ class CertificateController extends Controller
      */
     public function show(Certificate $certificado): Response
     {
-        $user = auth()->user();
+        $this->autorizarLectura($certificado);
 
-        // Verificar permisos - solo el propietario, emisor o admin puede ver
-        if (!$user->hasRole(['Administrador', 'Coordinador']) &&
-            $certificado->user_id !== $user->id &&
-            $certificado->emitido_por !== $user->id) {
-            \Log::warning('Acceso denegado a certificado', [
-                'user_id' => $user->id,
-                'certificado_id' => $certificado->id,
-            ]);
-            abort(403, 'No tienes permisos para ver este certificado.');
-        }
-
-        $certificado->load(['usuario', 'evento', 'emisor']);
+        // Usuario y emisor completos: Avatar necesita la foto (avatar_url).
+        $certificado->load(['usuario', 'evento:id,titulo,descripcion,fecha_inicio,fecha_fin', 'emisor']);
 
         return Inertia::render('Certificados/Show', [
             'certificado' => $certificado,
+            'tipos' => Certificate::TIPOS,
+            'estados' => Certificate::ESTADOS,
+            'puedeGestionar' => $this->esGestor() || $certificado->emitido_por === auth()->id(),
+            'tieneArchivoPropio' => $this->archivoPropioDisponible($certificado),
         ]);
     }
 
@@ -185,22 +135,16 @@ class CertificateController extends Controller
      */
     public function edit(Certificate $certificado): Response
     {
-        $user = auth()->user();
+        $this->autorizarGestion($certificado);
 
-        // Verificar permisos - solo el emisor o admin puede editar
-        if (!$user->hasRole(['Administrador', 'Coordinador']) &&
-            $certificado->emitido_por !== $user->id) {
-            abort(403, 'No tienes permisos para editar este certificado.');
-        }
-
-        $certificado->load(['usuario', 'evento']);
-        $estudiantes = User::role('Estudiante')->select('id', 'name', 'email')->get();
-        $eventos = Evento::select('id', 'titulo')->get();
+        $certificado->load(['usuario:id,name,email', 'evento:id,titulo']);
 
         return Inertia::render('Certificados/Edit', [
             'certificado' => $certificado,
-            'estudiantes' => $estudiantes,
-            'eventos' => $eventos,
+            'estudiantes' => User::role('Estudiante')->select('id', 'name', 'email')->orderBy('name')->get(),
+            'eventos' => Evento::select('id', 'titulo', 'fecha_inicio')->orderByDesc('fecha_inicio')->get(),
+            'tipos' => Certificate::TIPOS,
+            'estados' => Certificate::ESTADOS,
         ]);
     }
 
@@ -209,62 +153,37 @@ class CertificateController extends Controller
      */
     public function update(Request $request, Certificate $certificado): RedirectResponse
     {
-        $user = auth()->user();
+        $this->autorizarGestion($certificado);
 
-        // Verificar permisos - solo el emisor o admin puede editar
-        if (!$user->hasRole(['Administrador', 'Coordinador']) &&
-            $certificado->emitido_por !== $user->id) {
-            abort(403, 'No tienes permisos para editar este certificado.');
-        }
+        $validated = $this->validar($request, conEstado: true);
 
-        $validated = $request->validate([
-            'titulo' => 'required|string|max:255',
-            'descripcion' => 'nullable|string|max:1000',
-            'tipo' => 'required|in:participacion,ponencia,poster,organizacion,voluntariado',
-            'fecha_emision' => 'required|date|before_or_equal:today',
-            'user_id' => 'required|exists:users,id',
-            'evento_id' => 'nullable|exists:eventos,id',
-            'metadata' => 'nullable|array',
-            'observaciones' => 'nullable|string|max:1000',
-            'estado' => 'required|in:activo,revocado',
-            'archivo_certificado' => 'nullable|file|mimes:pdf|max:10240', // 10MB máximo
-        ], [
-            'titulo.required' => 'El título del certificado es obligatorio.',
-            'tipo.required' => 'El tipo de certificado es obligatorio.',
-            'fecha_emision.required' => 'La fecha de emisión es obligatoria.',
-            'fecha_emision.before_or_equal' => 'La fecha de emisión no puede ser futura.',
-            'user_id.required' => 'Debes seleccionar un estudiante.',
-            'user_id.exists' => 'El estudiante seleccionado no existe.',
-            'evento_id.exists' => 'El evento seleccionado no existe.',
-            'estado.required' => 'El estado del certificado es obligatorio.',
-            'archivo_certificado.file' => 'El archivo debe ser válido.',
-            'archivo_certificado.mimes' => 'El archivo debe ser un PDF.',
-            'archivo_certificado.max' => 'El archivo no puede ser mayor a 10MB.',
-        ]);
+        $datos = [
+            'titulo' => $validated['titulo'],
+            'descripcion' => $validated['descripcion'] ?? null,
+            'tipo' => $validated['tipo'],
+            'fecha_emision' => $validated['fecha_emision'],
+            'user_id' => $validated['user_id'],
+            'evento_id' => $validated['evento_id'] ?? null,
+            'estado' => $validated['estado'],
+            'observaciones' => $validated['observaciones'] ?? null,
+            'metadata' => array_merge($certificado->metadata ?? [], $this->metadata($validated)),
+        ];
 
-        // Manejar la subida del archivo PDF
-        if ($request->hasFile('archivo_certificado')) {
-            // Eliminar archivo anterior si existe
+        // Un archivo nuevo reemplaza al anterior; quitarlo vuelve al
+        // certificado generado por el sistema.
+        if ($request->hasFile('archivo_certificado') || $request->boolean('quitar_archivo')) {
             if ($certificado->archivo_certificado) {
-                \Storage::disk('public')->delete($certificado->archivo_certificado);
+                Storage::disk('public')->delete($certificado->archivo_certificado);
             }
-
-            $archivo = $request->file('archivo_certificado');
-            $archivoPath = $archivo->store('certificados', 'public');
-            $validated['archivo_certificado'] = $archivoPath;
+            $datos['archivo_certificado'] = $request->hasFile('archivo_certificado')
+                ? $request->file('archivo_certificado')->store('certificados', 'public')
+                : null;
         }
 
-        // Asegurar que metadata sea un array válido
-        $metadata = $validated['metadata'] ?? [];
-        if (!is_array($metadata)) {
-            $metadata = [];
-        }
-        $validated['metadata'] = $metadata;
+        $certificado->update($datos);
 
-        $certificado->update($validated);
-
-        return redirect()->route('certificados.index')
-            ->with('success', 'Certificado actualizado exitosamente.');
+        return redirect()->route('certificados.show', $certificado)
+            ->with('success', 'Certificado actualizado correctamente.');
     }
 
     /**
@@ -272,45 +191,122 @@ class CertificateController extends Controller
      */
     public function destroy(Certificate $certificado): RedirectResponse
     {
-        $user = auth()->user();
+        $this->autorizarGestion($certificado);
 
-        // Verificar permisos - solo el emisor o admin puede eliminar
-        if (!$user->hasRole(['Administrador', 'Coordinador']) &&
-            $certificado->emitido_por !== $user->id) {
-            abort(403, 'No tienes permisos para eliminar este certificado.');
-        }
-
-        // Eliminar archivo si existe
         if ($certificado->archivo_certificado) {
-            \Storage::disk('public')->delete($certificado->archivo_certificado);
+            Storage::disk('public')->delete($certificado->archivo_certificado);
         }
 
         $certificado->delete();
 
         return redirect()->route('certificados.index')
-            ->with('success', 'Certificado eliminado exitosamente.');
+            ->with('success', 'Certificado eliminado correctamente.');
     }
 
     /**
-     * Descargar el certificado
+     * Entrega el PDF del certificado.
+     *
+     * Si al emitirlo se adjuntó un PDF propio (por ejemplo, uno ya firmado a
+     * mano), se entrega ese. Si no, el sistema genera el certificado con el
+     * formato institucional. Antes, sin archivo adjunto, no había nada que
+     * descargar y la pantalla mostraba «Sin PDF».
+     *
+     * Con ?ver=1 se abre en el navegador en lugar de descargarse.
      */
-    public function descargar(Certificate $certificado)
+    public function descargar(Request $request, Certificate $certificado)
+    {
+        $this->autorizarLectura($certificado);
+
+        // Un certificado revocado no debe circular como válido: su titular ya
+        // no puede descargarlo; los gestores sí, marcado como «REVOCADO».
+        if ($certificado->estado === 'revocado' && !$this->esGestor()) {
+            return redirect()->back()->with('error', 'Este certificado fue revocado y ya no está disponible.');
+        }
+
+        $nombre = 'certificado_' . $certificado->codigo . '.pdf';
+        $enLinea = $request->boolean('ver');
+
+        if ($this->archivoPropioDisponible($certificado)) {
+            $ruta = Storage::disk('public')->path($certificado->archivo_certificado);
+
+            return $enLinea
+                ? response()->file($ruta, ['Content-Type' => 'application/pdf', 'Content-Disposition' => 'inline; filename="' . $nombre . '"'])
+                : response()->download($ruta, $nombre);
+        }
+
+        $certificado->loadMissing(['usuario:id,name', 'evento:id,titulo', 'emisor']);
+
+        $pdf = Pdf::loadView('certificados.pdf', [
+            'certificado' => $certificado,
+            'logo' => RecursosPdf::logo(),
+        ])->setPaper('A4', 'landscape');
+
+        return $enLinea ? $pdf->stream($nombre) : $pdf->download($nombre);
+    }
+
+    /* ------------------------------------------------------------------ */
+
+    private function validar(Request $request, bool $conEstado = false): array
+    {
+        return $request->validate([
+            'titulo' => 'required|string|max:255',
+            'descripcion' => 'nullable|string|max:1000',
+            'tipo' => ['required', Rule::in(array_keys(Certificate::TIPOS))],
+            'fecha_emision' => 'required|date|before_or_equal:today',
+            'user_id' => 'required|exists:users,id',
+            'evento_id' => 'nullable|exists:eventos,id',
+            'horas' => 'nullable|integer|min:1|max:1000',
+            'observaciones' => 'nullable|string|max:1000',
+            'estado' => $conEstado ? ['required', Rule::in(array_keys(Certificate::ESTADOS))] : 'prohibited',
+            'archivo_certificado' => 'nullable|file|mimes:pdf|max:10240',
+            'quitar_archivo' => 'nullable|boolean',
+        ], [
+            'titulo.required' => 'El título del certificado es obligatorio.',
+            'tipo.required' => 'El tipo de certificado es obligatorio.',
+            'tipo.in' => 'El tipo de certificado no es válido.',
+            'fecha_emision.required' => 'La fecha de emisión es obligatoria.',
+            'fecha_emision.before_or_equal' => 'La fecha de emisión no puede ser futura.',
+            'user_id.required' => 'Debes seleccionar un estudiante.',
+            'user_id.exists' => 'El estudiante seleccionado no existe.',
+            'evento_id.exists' => 'El evento seleccionado no existe.',
+            'horas.integer' => 'La intensidad horaria debe ser un número entero.',
+            'horas.min' => 'La intensidad horaria debe ser de al menos 1 hora.',
+            'horas.max' => 'La intensidad horaria no puede superar las 1000 horas.',
+            'estado.required' => 'El estado del certificado es obligatorio.',
+            'archivo_certificado.file' => 'El archivo debe ser válido.',
+            'archivo_certificado.mimes' => 'El archivo debe ser un PDF.',
+            'archivo_certificado.max' => 'El archivo no puede pesar más de 10 MB.',
+        ]);
+    }
+
+    /** Datos adicionales que se guardan en la columna metadata. */
+    private function metadata(array $validated): array
+    {
+        return ['horas' => isset($validated['horas']) ? (int) $validated['horas'] : null];
+    }
+
+    /** El archivo adjunto existe de verdad en el disco (no sólo en la base). */
+    private function archivoPropioDisponible(Certificate $certificado): bool
+    {
+        return $certificado->archivo_certificado
+            && Storage::disk('public')->exists($certificado->archivo_certificado);
+    }
+
+    /** Puede verlo su titular, quien lo emitió o un gestor. */
+    private function autorizarLectura(Certificate $certificado): void
     {
         $user = auth()->user();
 
-        // Verificar permisos - solo el propietario, emisor o admin puede descargar
-        if (!$user->hasRole(['Administrador', 'Coordinador']) &&
-            $certificado->user_id !== $user->id &&
-            $certificado->emitido_por !== $user->id) {
-            abort(403, 'No tienes permisos para descargar este certificado.');
+        if (!$this->esGestor() && $certificado->user_id !== $user->id && $certificado->emitido_por !== $user->id) {
+            abort(403, 'No tienes permisos para ver este certificado.');
         }
-
-        if (!$certificado->archivo_certificado) {
-            return redirect()->back()
-                ->with('error', 'El archivo del certificado no está disponible.');
-        }
-
-        return response()->download(storage_path('app/public/' . $certificado->archivo_certificado));
     }
 
+    /** Puede modificarlo quien lo emitió o un gestor. */
+    private function autorizarGestion(Certificate $certificado): void
+    {
+        if (!$this->esGestor() && $certificado->emitido_por !== auth()->id()) {
+            abort(403, 'No tienes permisos para modificar este certificado.');
+        }
+    }
 }

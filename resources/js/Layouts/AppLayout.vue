@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { Head, usePage } from '@inertiajs/vue3';
 import Sidebar from '@/Components/Sidebar.vue';
 import Header from '@/Components/Header.vue';
@@ -22,23 +22,43 @@ const layoutAuth = computed(() => page.props.auth ?? props.auth ?? {});
 // Cambia con cada navegación; sirve de clave para reanimar el contenido.
 const rutaActual = computed(() => page.url);
 
-const isSidebarCollapsed = ref(false);
-const isMobile = ref(false);
+// Se parte del ancho real para que en celular el menú nazca cerrado; antes
+// aparecía abierto un instante y tapaba la pantalla hasta que corría onMounted.
+const esMovil = () => typeof window !== 'undefined' && window.innerWidth < 768;
+
+const isSidebarCollapsed = ref(esMovil());
+const isMobile = ref(esMovil());
 
 const toggleSidebar = () => {
     isSidebarCollapsed.value = !isSidebarCollapsed.value;
 };
 
+// En celular, Safari y Chrome disparan «resize» al ocultar la barra de
+// direcciones al desplazar. Sólo se reacciona cuando se cruza el límite de 768 px
+// de ancho; si no, el menú abierto se cerraba solo al hacer scroll.
 const checkMobile = () => {
-    isMobile.value = window.innerWidth < 768;
-    if (isMobile.value) {
-        isSidebarCollapsed.value = true;
-    }
+    const ahoraMovil = esMovil();
+    if (ahoraMovil === isMobile.value) return;
+
+    isMobile.value = ahoraMovil;
+    // Al pasar a celular se cierra; al pasar a escritorio se muestra completo.
+    isSidebarCollapsed.value = ahoraMovil;
+};
+
+// Escape cierra el menú en celular (teclado externo / accesibilidad).
+const alPulsarTecla = (evento) => {
+    if (evento.key === 'Escape') closeMobileSidebar();
 };
 
 onMounted(() => {
     checkMobile();
-    window.addEventListener('resize', checkMobile);
+    window.addEventListener('resize', checkMobile, { passive: true });
+    window.addEventListener('keydown', alPulsarTecla);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('resize', checkMobile);
+    window.removeEventListener('keydown', alPulsarTecla);
 });
 
 // Cerrar sidebar en móvil al hacer clic fuera
@@ -47,6 +67,10 @@ const closeMobileSidebar = () => {
         isSidebarCollapsed.value = true;
     }
 };
+
+// Al elegir una opción del menú en celular, el menú debe cerrarse; antes se
+// quedaba abierto tapando la pantalla a la que se acababa de navegar.
+watch(rutaActual, closeMobileSidebar);
 </script>
 
 <template>
@@ -54,7 +78,7 @@ const closeMobileSidebar = () => {
          va el nombre de la pantalla, o se repetiría dos veces en la pestaña. -->
     <Head :title="title || 'Inicio'" />
 
-    <div class="min-h-screen bg-gray-50">
+    <div class="min-h-app bg-gray-50">
         <!-- Sidebar -->
         <div
             :class="[
@@ -91,13 +115,14 @@ const closeMobileSidebar = () => {
             />
 
             <!-- Encabezado propio de cada página (slot opcional) -->
-            <div v-if="$slots.header" class="animar-entrada px-6 pt-6">
+            <div v-if="$slots.header" class="animar-entrada px-4 pt-4 sm:px-6 sm:pt-6">
                 <slot name="header" />
             </div>
 
             <!-- Contenido de la página. La clave hace que Vue vuelva a montar
-                 el bloque en cada navegación y la animación se repita. -->
-            <main :key="rutaActual" class="animar-entrada p-6">
+                 el bloque en cada navegación y la animación se repita.
+                 min-w-0 evita que una tabla ancha estire toda la pantalla. -->
+            <main :key="rutaActual" class="animar-entrada min-w-0 p-4 sm:p-6">
                 <slot />
             </main>
         </div>

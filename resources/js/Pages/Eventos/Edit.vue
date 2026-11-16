@@ -73,7 +73,7 @@
                                     @change="handleImageChange"
                                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 />
-                                <p class="text-sm text-gray-500 mt-1">Formatos: JPG, PNG, WEBP. Máximo 2MB.</p>
+                                <p class="text-sm text-gray-500 mt-1">Formatos: JPG, PNG o WEBP. Máximo 5 MB.</p>
                                 <div v-if="form.errors.imagen" class="text-red-600 text-sm mt-1">{{ form.errors.imagen }}</div>
 
                                 <!-- Preview de la nueva imagen -->

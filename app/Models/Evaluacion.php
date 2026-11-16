@@ -204,6 +204,46 @@ class Evaluacion extends Model
      *
      * @return void
      */
+    /**
+     * Puntaje por criterio y cuánto aportó cada uno a la nota sobre 100
+     * (puntaje / máximo × peso). Es lo que explica de dónde sale la nota, y
+     * lo muestran tanto el estudiante («Mis notas») como la coordinación
+     * («Resultados de evaluación»).
+     *
+     * @return array{nombre: string, descripcion: ?string, criterios: array}|null
+     */
+    public function desglosePorCriterio(): ?array
+    {
+        $this->loadMissing(['rubrica:id,nombre,descripcion', 'detalleEvaluaciones.criterio']);
+
+        if ($this->detalleEvaluaciones->isEmpty()) {
+            return null;
+        }
+
+        $criterios = $this->detalleEvaluaciones
+            ->filter(fn ($detalle) => $detalle->criterio)
+            ->map(function ($detalle) {
+                $maximo = (int) $detalle->criterio->puntaje_maximo;
+                $peso = (float) $detalle->criterio->peso;
+
+                return [
+                    'nombre' => $detalle->criterio->criterio,
+                    'puntaje' => (int) $detalle->puntaje,
+                    'maximo' => $maximo,
+                    'peso' => $peso,
+                    'aporte' => $maximo > 0 ? round($detalle->puntaje / $maximo * $peso, 2) : 0,
+                ];
+            })
+            ->values()
+            ->all();
+
+        return [
+            'nombre' => $this->rubrica?->nombre ?? 'Rúbrica',
+            'descripcion' => $this->rubrica?->descripcion,
+            'criterios' => $criterios,
+        ];
+    }
+
     public function completarEvaluacion(): void
     {
         $this->nota_final = $this->calcularNotaFinal();

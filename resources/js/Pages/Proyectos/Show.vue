@@ -46,7 +46,7 @@
                     <div class="min-w-0 lg:col-span-2">
                         <div class="mb-6 rounded-lg border border-gray-200 bg-white shadow-sm">
                             <div class="border-b border-gray-200 px-6 py-4">
-                                <h2 class="text-lg font-semibold text-gray-900">Informacion del Proyecto</h2>
+                                <h2 class="text-lg font-semibold text-gray-900">Información del proyecto</h2>
                             </div>
                             <div class="p-6">
                                 <div class="space-y-4">
@@ -67,11 +67,11 @@
                                             <p class="text-gray-600">{{ proyecto.semillero?.nombre || 'N/A' }}</p>
                                         </div>
                                         <div>
-                                            <label class="mb-1 block text-sm font-medium text-gray-700">Fecha de creacion</label>
+                                            <label class="mb-1 block text-sm font-medium text-gray-700">Fecha de creación</label>
                                             <p class="text-gray-600">{{ formatDate(proyecto.created_at) }}</p>
                                         </div>
                                         <div>
-                                            <label class="mb-1 block text-sm font-medium text-gray-700">Ultima actualizacion</label>
+                                            <label class="mb-1 block text-sm font-medium text-gray-700">Última actualización</label>
                                             <p class="text-gray-600">{{ formatDate(proyecto.updated_at) }}</p>
                                         </div>
                                     </div>
@@ -146,7 +146,7 @@
                                     <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                                     </svg>
-                                    Subir Nueva Version
+                                    Subir nueva versión
                                 </button>
 
                                 <Link
@@ -189,7 +189,7 @@
 
                         <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
                             <div class="border-b border-gray-200 px-6 py-4">
-                                <h3 class="text-lg font-semibold text-gray-900">Estadisticas</h3>
+                                <h3 class="text-lg font-semibold text-gray-900">Estadísticas</h3>
                             </div>
                             <div class="p-6">
                                 <div class="space-y-3">
@@ -198,7 +198,7 @@
                                         <span class="text-sm font-medium text-gray-900">{{ proyecto.versiones?.length || 0 }}</span>
                                     </div>
                                     <div class="flex justify-between">
-                                        <span class="text-sm text-gray-600">Dias desde creacion</span>
+                                        <span class="text-sm text-gray-600">Días desde la creación</span>
                                         <span class="text-sm font-medium text-gray-900">{{ getDaysSinceCreation() }}</span>
                                     </div>
                                 </div>
@@ -210,9 +210,9 @@
         </div>
 
         <div v-if="showUploadModal" class="fixed inset-0 z-50 h-full w-full overflow-y-auto bg-gray-600 bg-opacity-50">
-            <div class="relative top-20 mx-auto w-96 rounded-md border bg-white p-5 shadow-lg">
+            <div class="relative top-20 mx-auto w-[calc(100%-2rem)] max-w-sm rounded-md border bg-white p-5 shadow-lg">
                 <div class="mt-3">
-                    <h3 class="mb-4 text-lg font-medium text-gray-900">Subir Nueva Version</h3>
+                    <h3 class="mb-4 text-lg font-medium text-gray-900">Subir nueva versión</h3>
                     <form @submit.prevent="uploadVersion">
                         <div class="mb-4">
                             <label class="mb-2 block text-sm font-medium text-gray-700">Archivo</label>
@@ -223,7 +223,7 @@
                                 required
                                 class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
-                            <p class="mt-1 text-xs text-gray-500">Formatos permitidos: PDF, DOC, DOCX (max. 10MB)</p>
+                            <p class="mt-1 text-xs text-gray-500">Formatos permitidos: PDF, DOC o DOCX (máximo 10 MB)</p>
                         </div>
                         <div class="mb-4">
                             <label class="mb-2 block text-sm font-medium text-gray-700">Comentario (opcional)</label>
@@ -231,7 +231,7 @@
                                 v-model="uploadForm.comentario"
                                 rows="3"
                                 class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="Describe los cambios en esta version..."
+                                placeholder="Describe los cambios de esta versión…"
                             />
                         </div>
                         <div class="flex justify-end space-x-3">
@@ -351,10 +351,10 @@ const uploadVersion = () => {
         onSuccess: () => {
             showUploadModal.value = false;
             uploadForm.reset();
-            feedbackMessage.value = 'Version subida exitosamente.';
+            feedbackMessage.value = 'Versión subida correctamente.';
         },
         onError: () => {
-            errorMessage.value = 'No se pudo subir la version.';
+            errorMessage.value = 'No se pudo subir la versión.';
         },
     });
 };
@@ -374,7 +374,7 @@ const changeStatus = () => {
 };
 
 const confirmDeleteVersion = (versionId, fileName) => {
-    if (confirm(`¿Estas seguro de que quieres eliminar la version "${fileName}"?\n\nEsta accion no se puede deshacer.`)) {
+    if (confirm(`¿Estás seguro de que quieres eliminar la versión «${fileName}»?\n\nEsta acción no se puede deshacer.`)) {
         deleteVersion(versionId);
     }
 };
@@ -386,11 +386,11 @@ const deleteVersion = (versionId) => {
     router.delete(route('versiones.delete', versionId), {
         preserveScroll: true,
         onSuccess: () => {
-            feedbackMessage.value = 'Version eliminada exitosamente.';
+            feedbackMessage.value = 'Versión eliminada correctamente.';
             router.reload({ only: ['proyecto', 'flash'] });
         },
         onError: () => {
-            errorMessage.value = 'No se pudo eliminar la version.';
+            errorMessage.value = 'No se pudo eliminar la versión.';
         },
     });
 };

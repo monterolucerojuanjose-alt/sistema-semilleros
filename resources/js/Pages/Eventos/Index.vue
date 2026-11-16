@@ -92,7 +92,7 @@
                 </div>
 
                 <!-- Lista de eventos -->
-                <div v-if="filteredEventos.length > 0" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <div v-if="filteredEventos.length > 0" class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                     <div v-for="evento in filteredEventos" :key="evento.id"
                          class="tarjeta-interactiva animar-entrada overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
                         <!-- Imagen del evento -->
@@ -108,7 +108,7 @@
                         <div class="p-6 bg-gradient-to-br from-white to-gray-50">
                             <!-- Header de la tarjeta -->
                             <div class="flex items-start justify-between mb-4">
-                                <div class="flex-1">
+                                <div class="min-w-0 flex-1">
                                     <h3 class="text-lg font-semibold text-gray-900 line-clamp-2">
                                         {{ evento.titulo }}
                                     </h3>
@@ -196,7 +196,7 @@
                             </div>
 
                             <!-- Acciones -->
-                            <div class="flex gap-3">
+                            <div class="flex flex-wrap gap-3 [&>*]:min-w-[8rem]">
                                 <!-- Botones para Admin/Coordinador -->
                                 <template v-if="isAdmin">
                                     <Link
@@ -422,7 +422,7 @@
                                             required
                                             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         />
-                                        <p class="text-xs text-gray-500 mt-1">Tamaño máximo: 10MB</p>
+                                        <p class="text-xs text-gray-500 mt-1">Tamaño máximo: 10 MB</p>
                                         <div v-if="form.errors.archivo_proyecto" class="text-red-600 text-sm mt-1">{{ form.errors.archivo_proyecto }}</div>
                                     </div>
 

@@ -60,11 +60,19 @@ Cree la base de datos:
 CREATE DATABASE semilleros_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-Cree las tablas y cargue los datos de demostración (roles, usuarios, semilleros, proyectos, rúbricas, eventos, etc.):
+Cree las tablas y los roles del sistema. La instalación queda **en blanco**: sin semilleros, proyectos ni usuarios de ejemplo, lista para configurarse.
 
 ```bash
 php artisan migrate --seed
 ```
+
+Cree el primer administrador (el comando pide nombre, correo y contraseña):
+
+```bash
+php artisan semilleros:crear-administrador
+```
+
+Con esa cuenta se inicia sesión y se configura todo desde la aplicación: usuarios y roles, semilleros, eventos y rúbricas. Los estudiantes también pueden registrarse por su cuenta desde la pantalla de inicio de sesión.
 
 ### 4. Enlace de almacenamiento público
 
@@ -79,9 +87,15 @@ php artisan db:check       # comprueba la conexión y muestra estadísticas
 php artisan sistema:estado # estado general del sistema
 ```
 
-## Usuarios de demostración
+## Datos de demostración (opcional)
 
-Tras ejecutar los seeders existe un usuario por cada rol:
+Para ver el sistema funcionando con datos de ejemplo (semilleros, proyectos, eventos, rúbricas, evaluaciones, certificados y notificaciones), cárguelos **sobre una base de datos de pruebas**:
+
+```bash
+php artisan db:seed --class=DatosDemostracionSeeder
+```
+
+Crea un usuario por cada rol:
 
 | Rol | Correo | Contraseña |
 |---|---|---|
@@ -91,7 +105,7 @@ Tras ejecutar los seeders existe un usuario por cada rol:
 | Estudiante | `estudiante.rol@umariana.edu.co` | `password` |
 | Jurado | `jurado.rol@umariana.edu.co` | `password` |
 
-También se crea `admin@semilleros.edu` (contraseña `admin123`). Estas credenciales son solo para demostración y deben cambiarse en cualquier despliegue real.
+y además `admin@semilleros.edu` (contraseña `admin123`). Estas contraseñas son públicas: no cargue estos datos en una instalación real.
 
 ## Ejecución
 
@@ -133,7 +147,7 @@ app/
   Models/              Modelos Eloquent
   Observers/           Registro automático de auditoría
   Policies/            Reglas de autorización
-  Support/             Utilidades compartidas (catálogos de eventos, numeración de PDF)
+  Support/             Utilidades compartidas (catálogos de eventos, textos y recursos de los PDF)
 database/
   migrations/          Migraciones del esquema
   seeders/             Datos iniciales y de demostración
@@ -157,7 +171,7 @@ tests/                 Pruebas unitarias, de funcionalidad y de usabilidad
 3. **Proyectos** — registro de proyectos con versionamiento de documentos y flujo de estados (Inscrito, En revisión, Aprobado, Rechazado).
 4. **Eventos e inscripciones** — convocatorias y presentación de propuestas. Cada propuesta declara su **modalidad** y su **área de participación**; el coordinador la aprueba (asignando aula, horario y jurado) o la rechaza con un motivo, y el estudiante puede corregirla y reenviarla.
 5. **Evaluaciones** — rúbricas con criterios ponderados, que pueden ligarse a un evento y a una modalidad. Los jurados califican con ellas tanto proyectos de semillero como propuestas de evento. La nota va de **0 a 100**. Cada jurado solo ve sus propias evaluaciones.
-6. **Certificados** — generación de certificados en PDF con descarga directa.
+6. **Certificados** — emisión de certificados; el sistema genera el PDF con el formato institucional (o entrega uno adjunto) y permite revocarlos.
 7. **Notificaciones** — avisos en la aplicación y envío de correo mediante colas (Jobs).
 8. **Auditoría** — registro automático de acciones sobre las entidades del sistema.
 9. **Reportes** — vista previa y exportación a Excel y PDF de semilleros, proyectos, eventos, inscripciones, evaluaciones y participantes.
@@ -185,6 +199,7 @@ Tablas principales:
 php artisan db:check                       # Verifica la conexión y muestra estadísticas
 php artisan sistema:estado                 # Resumen del estado del sistema
 php artisan user:assign-role {email} {rol} # Asigna un rol a un usuario
+php artisan semilleros:crear-administrador  # Crea el primer administrador
 ```
 
 ## Pruebas
@@ -206,7 +221,7 @@ bash scripts/preparar-base-pruebas.sh               # copia semilleros_db en sem
 php vendor/bin/phpunit -c phpunit.usabilidad.xml
 ```
 
-Trabajan sobre la copia `semilleros_db_test` y cada prueba se revierte al terminar, de modo que la base real no se modifica. Requieren que `semilleros_db` tenga los datos de demostración (`php artisan migrate --seed`).
+Trabajan sobre la copia `semilleros_db_test` y cada prueba se revierte al terminar, de modo que la base real no se modifica. Requieren que `semilleros_db` tenga los datos de demostración (`php artisan db:seed --class=DatosDemostracionSeeder`).
 
 ## Respaldos
 

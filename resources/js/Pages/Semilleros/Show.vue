@@ -155,7 +155,7 @@ const getEstadoDisplayName = (estado) => {
                         <!-- Solicitudes pendientes (solo para coordinadores) -->
                         <div v-if="canManage && semillero.solicitudes_pendientes?.length > 0" class="mb-8">
                             <h2 class="text-xl font-semibold text-gray-900 mb-4">Solicitudes Pendientes</h2>
-                            <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                            <div class="bg-white border border-gray-200 rounded-lg overflow-x-auto">
                                 <table class="min-w-full divide-y divide-gray-200">
                                     <thead class="bg-gray-50">
                                         <tr>
@@ -163,7 +163,7 @@ const getEstadoDisplayName = (estado) => {
                                                 Estudiante
                                             </th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Email
+                                                Correo electrónico
                                             </th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 Fecha de Solicitud

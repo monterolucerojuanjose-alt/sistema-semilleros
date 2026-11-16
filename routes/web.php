@@ -76,6 +76,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('role:Estudiante')->group(function () {
         Route::get('mis-notas', [MisNotasController::class, 'index'])->name('mis-notas');
+        Route::get('mis-notas/proyecto/{evaluacion}', [MisNotasController::class, 'showProyecto'])->name('mis-notas.proyecto');
         Route::get('mis-notas/{propuesta}', [MisNotasController::class, 'show'])->name('mis-notas.show');
         Route::post('eventos/{evento}/inscribir', [EventoController::class, 'inscribir'])->name('eventos.inscribir');
         Route::post('eventos/{evento}/cancelar-inscripcion', [EventoController::class, 'cancelarInscripcion'])->name('eventos.cancelar-inscripcion');

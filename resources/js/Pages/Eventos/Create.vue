@@ -13,7 +13,7 @@
                         </Link>
                         <div>
                             <h1 class="text-3xl font-bold text-gray-900">Crear Nuevo Evento</h1>
-                            <p class="mt-2 text-gray-600">Completa la informacion del evento academico</p>
+                            <p class="mt-2 text-gray-600">Completa la información del evento académico</p>
                         </div>
                     </div>
                 </div>
@@ -23,7 +23,7 @@
                         <div class="space-y-6">
                             <div>
                                 <label for="titulo" class="mb-2 block text-sm font-medium text-gray-700">
-                                    Titulo del Evento <span class="text-red-500">*</span>
+                                    Título del evento <span class="text-red-500">*</span>
                                 </label>
                                 <input
                                     id="titulo"
@@ -31,14 +31,14 @@
                                     type="text"
                                     required
                                     class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="Ej: Congreso Nacional de Investigacion 2025"
+                                    placeholder="Ej.: Congreso Nacional de Investigación 2025"
                                 />
                                 <div v-if="form.errors.titulo" class="mt-1 text-sm text-red-600">{{ form.errors.titulo }}</div>
                             </div>
 
                             <div>
                                 <label for="descripcion" class="mb-2 block text-sm font-medium text-gray-700">
-                                    Descripcion <span class="text-red-500">*</span>
+                                    Descripción <span class="text-red-500">*</span>
                                 </label>
                                 <textarea
                                     id="descripcion"
@@ -62,7 +62,7 @@
                                     @change="handleImageChange"
                                     class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
-                                <p class="mt-1 text-sm text-gray-500">Formatos: JPG, PNG, WEBP. Maximo 2MB.</p>
+                                <p class="mt-1 text-sm text-gray-500">Formatos: JPG, PNG o WEBP. Máximo 5 MB.</p>
                                 <div v-if="form.errors.imagen" class="mt-1 text-sm text-red-600">{{ form.errors.imagen }}</div>
 
                                 <div v-if="imagePreview" class="mt-4">
@@ -122,21 +122,21 @@
 
                             <div>
                                 <label for="ubicacion" class="mb-2 block text-sm font-medium text-gray-700">
-                                    Ubicacion
+                                    Ubicación
                                 </label>
                                 <input
                                     id="ubicacion"
                                     v-model="form.ubicacion"
                                     type="text"
                                     class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="Ej: Auditorio Principal - Campus Central"
+                                    placeholder="Ej.: Auditorio Principal - Campus Central"
                                 />
                                 <div v-if="form.errors.ubicacion" class="mt-1 text-sm text-red-600">{{ form.errors.ubicacion }}</div>
                             </div>
 
                             <div>
                                 <label for="cupo_maximo" class="mb-2 block text-sm font-medium text-gray-700">
-                                    Cupo Maximo
+                                    Cupo máximo
                                 </label>
                                 <input
                                     id="cupo_maximo"
@@ -146,7 +146,7 @@
                                     class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     placeholder="Deja en blanco para cupos ilimitados"
                                 />
-                                <p class="mt-1 text-sm text-gray-500">Deja vacio si no hay limite de participantes</p>
+                                <p class="mt-1 text-sm text-gray-500">Déjalo vacío si no hay límite de participantes</p>
                                 <div v-if="form.errors.cupo_maximo" class="mt-1 text-sm text-red-600">{{ form.errors.cupo_maximo }}</div>
                             </div>
 

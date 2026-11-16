@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue';
+import { nivelNota } from '@/utils/notas';
 import { Link } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Avatar from '@/Components/Avatar.vue';
@@ -31,13 +32,8 @@ const nota = computed(() => {
     return valor === null || valor === undefined ? null : Number(valor).toFixed(1);
 });
 
-const colorNota = computed(() => {
-    if (nota.value === null) return 'text-gray-400';
-    const n = Number(nota.value);
-    if (n >= 90) return 'text-emerald-600';
-    if (n >= 60) return 'text-blue-600';
-    return 'text-red-600';
-});
+// Escala única del sistema (ver utils/notas.js).
+const colorNota = computed(() => nivelNota(nota.value).texto_color);
 
 /**
  * Los participantes se guardan como JSON; según cómo se haya grabado la fila

@@ -158,7 +158,7 @@ const getIcon = (nombre) => iconos[nombre] || iconos['home'];
 <template>
     <aside
         :class="[
-            'flex h-full flex-col bg-slate-900 text-white transition-all duration-300 ease-in-out',
+            'pb-seguro flex h-full max-w-[85vw] flex-col bg-slate-900 text-white transition-all duration-300 ease-in-out',
             isCollapsed ? 'w-16' : 'w-64',
         ]"
         role="navigation"

@@ -10,6 +10,13 @@ use Inertia\Inertia;
 
 class ResultadosEvaluacionController extends Controller
 {
+    /** Valores de evento_participantes.estado_evaluacion y su nombre visible. */
+    private const ESTADOS_EVALUACION = [
+        'sin_evaluar' => 'Sin evaluar',
+        'en_revision' => 'En revisión',
+        'evaluado' => 'Evaluado',
+    ];
+
     public function index(Request $request)
     {
         $user = auth()->user();
@@ -18,62 +25,64 @@ class ResultadosEvaluacionController extends Controller
         // Filtros
         $search = $request->get('search', '');
         $eventoId = $request->get('evento_id', '');
-        $estadoEvaluacion = $request->get('estado_evaluacion', '');
-        $sortBy = $request->get('sort_by', 'fecha_evaluacion');
-        $sortOrder = $request->get('sort_order', 'desc');
+        $estadoEvaluacion = array_key_exists($request->get('estado_evaluacion', ''), self::ESTADOS_EVALUACION)
+            ? $request->get('estado_evaluacion')
+            : '';
 
-        // Construir query base
-        $query = EventoParticipante::with([
-            'evento',
-            'usuario',
-            'evaluador'
-        ])->whereNotNull('evaluador_id');
+        // El orden llega por la URL: se acepta sólo de una lista conocida. Antes
+        // cualquier valor iba directo a la consulta y uno inválido daba error 500.
+        $sortBy = in_array($request->get('sort_by'), ['fecha_evaluacion', 'nota_final', 'estado_evaluacion', 'created_at'], true)
+            ? $request->get('sort_by')
+            : 'fecha_evaluacion';
+        $sortOrder = $request->get('sort_order') === 'asc' ? 'asc' : 'desc';
 
-        // Aplicar filtros según el rol
+        // Universo que puede ver el usuario según su rol. Las estadísticas se
+        // calculan sobre este mismo universo: antes un tutor veía en la tabla
+        // sólo a sus estudiantes, pero los totales de todo el sistema.
+        $base = EventoParticipante::query()->whereNotNull('evaluador_id');
+
         if ($userRole === 'Docente/Tutor') {
             // Los docentes sólo ven evaluaciones de sus estudiantes. El vínculo
             // no es una columna docente_id (no existe en users): un estudiante
             // es "suyo" si está aprobado en alguno de sus semilleros.
-            $query->whereHas('usuario.semillerosAprobados', function ($q) use ($user) {
+            $base->whereHas('usuario.semillerosAprobados', function ($q) use ($user) {
                 $q->where('semilleros.tutor_id', $user->id);
             });
         }
 
-        // Filtro por búsqueda
+        $query = (clone $base)->with(['evento:id,titulo,fecha_inicio', 'usuario', 'evaluador:id,name']);
+
         if ($search) {
-            $query->whereHas('usuario', function($q) use ($search) {
+            $query->whereHas('usuario', function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
-        // Filtro por evento
         if ($eventoId) {
             $query->where('evento_id', $eventoId);
         }
 
-        // Filtro por estado de evaluación
         if ($estadoEvaluacion) {
             $query->where('estado_evaluacion', $estadoEvaluacion);
         }
 
-        // Ordenamiento
-        $query->orderBy($sortBy, $sortOrder);
+        // Las aún no evaluadas no tienen fecha: se envían al final.
+        $resultados = $query
+            ->orderByRaw("{$sortBy} IS NULL")
+            ->orderBy($sortBy, $sortOrder)
+            ->orderByDesc('id')
+            ->paginate(15)
+            ->withQueryString();
 
-        $resultados = $query->paginate(15);
-
-        // Estadísticas generales
-        $promedio = EventoParticipante::whereNotNull('evaluador_id')
-            ->where('estado_evaluacion', 'evaluado')
-            ->avg('nota_final');
+        $promedio = (clone $base)->where('estado_evaluacion', 'evaluado')->avg('nota_final');
 
         $estadisticas = [
-            'total_evaluaciones' => EventoParticipante::whereNotNull('evaluador_id')->count(),
-            'evaluaciones_completadas' => EventoParticipante::whereNotNull('evaluador_id')
-                ->where('estado_evaluacion', 'evaluado')->count(),
-            'evaluaciones_pendientes' => EventoParticipante::whereNotNull('evaluador_id')
-                ->where('estado_evaluacion', 'sin_evaluar')->count(),
-            'promedio_general' => $promedio ? (float)$promedio : 0.0,
+            'total_evaluaciones' => (clone $base)->count(),
+            'evaluaciones_completadas' => (clone $base)->where('estado_evaluacion', 'evaluado')->count(),
+            // «En revisión» también está pendiente: antes sólo se contaba «sin evaluar».
+            'evaluaciones_pendientes' => (clone $base)->whereIn('estado_evaluacion', ['sin_evaluar', 'en_revision'])->count(),
+            'promedio_general' => $promedio !== null ? round((float) $promedio, 2) : null,
         ];
 
         // Lista de eventos para el filtro
@@ -84,12 +93,9 @@ class ResultadosEvaluacionController extends Controller
             ->orderBy('fecha_inicio', 'desc')
             ->get();
 
-        // Estados de evaluación disponibles
-        $estadosEvaluacion = [
-            'sin_evaluar' => 'Sin Evaluar',
-            'evaluado' => 'Evaluado',
-            'rechazado' => 'Rechazado'
-        ];
+        // Los valores reales de la columna. Antes se ofrecía «Rechazado», que
+        // la columna no admite, y faltaba «En revisión».
+        $estadosEvaluacion = self::ESTADOS_EVALUACION;
 
         return Inertia::render('ResultadosEvaluacion/Index', [
             'resultados' => $resultados,
@@ -130,8 +136,17 @@ class ResultadosEvaluacionController extends Controller
             }
         }
 
+        $evaluacion = \App\Models\Evaluacion::where('evento_participante_id', $resultado->id)
+            ->with('jurado:id,name')
+            ->latest('id')
+            ->first();
+
         return Inertia::render('ResultadosEvaluacion/Show', [
-            'resultado' => $resultado
+            'resultado' => $resultado,
+            // Puntaje por criterio de la rúbrica con la que calificó el jurado.
+            'rubrica' => $evaluacion?->desglosePorCriterio(),
+            'observacionesRubrica' => $evaluacion?->observaciones,
+            'archivoUrl' => $resultado->archivo_proyecto ? asset('storage/' . $resultado->archivo_proyecto) : null,
         ]);
     }
 

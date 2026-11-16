@@ -102,7 +102,7 @@
             <p>Puedes revisar todos los detalles en tu panel de usuario.</p>
             
             <div style="text-align: center;">
-                <a href="{{ url('/dashboard') }}" class="btn">Ir al Dashboard</a>
+                <a href="{{ url('/dashboard') }}" class="btn">Ir al panel principal</a>
             </div>
         </div>
 

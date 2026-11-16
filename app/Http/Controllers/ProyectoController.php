@@ -243,7 +243,7 @@ class ProyectoController extends Controller
         }
 
         $request->validate([
-            'archivo' => 'required|file|mimes:pdf,doc,docx|max:20480',
+            'archivo' => 'required|file|mimes:pdf,doc,docx|max:10240',
             'comentario' => 'nullable|string|max:500',
         ]);
 
@@ -259,7 +259,7 @@ class ProyectoController extends Controller
         ]);
 
         return redirect()->back()
-            ->with('success', 'Version subida exitosamente.');
+            ->with('success', 'Versión subida correctamente.');
     }
 
     public function history(Proyecto $proyecto): Response
@@ -355,7 +355,7 @@ class ProyectoController extends Controller
             if ($user->hasRole('Docente/Tutor')) {
                 $esTutor = $user->semillerosComoTutor()->where('id', $version->proyecto->semillero_id)->exists();
                 if (!$esTutor) {
-                    abort(403, 'No tienes permisos para eliminar esta version.');
+                    abort(403, 'No tienes permisos para eliminar esta versión.');
                 }
             } elseif ($version->proyecto->autor_id !== $user->id) {
                 abort(403, 'Solo puedes eliminar versiones de tus propios proyectos.');
@@ -370,10 +370,10 @@ class ProyectoController extends Controller
             $version->delete();
 
             return redirect()->back()
-                ->with('success', 'Version eliminada exitosamente.');
+                ->with('success', 'Versión eliminada correctamente.');
         } catch (\Exception $e) {
             return redirect()->back()
-                ->with('error', 'Error al eliminar la version: ' . $e->getMessage());
+                ->with('error', 'Error al eliminar la versión: ' . $e->getMessage());
         }
     }
 

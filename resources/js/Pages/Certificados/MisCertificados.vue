@@ -1,300 +1,150 @@
 <template>
-    <Head title="Mis Certificados" />
+    <AppLayout title="Mis certificados">
+        <div class="mx-auto max-w-7xl space-y-6">
+            <div class="animar-entrada">
+                <h1 class="text-2xl font-bold text-gray-900">Mis certificados</h1>
+                <p class="mt-1 text-sm text-gray-500">Constancias de tu participación en eventos y actividades de investigación.</p>
+            </div>
 
-    <AppLayout :auth="auth">
-        <div class="py-6">
-            <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                <!-- Header -->
-                <div class="mb-8">
-                    <div class="text-center">
-                        <h1 class="text-3xl font-bold text-gray-900">Mis Certificados</h1>
-                        <p class="text-gray-600 mt-2">Certificados de participación en eventos y actividades</p>
+            <AvisoFlash />
+
+            <!-- Resumen y filtros (sólo si hay algo que filtrar) -->
+            <div v-if="resumen?.total > 0" class="animar-entrada flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:flex-row md:items-center">
+                <p class="shrink-0 text-sm text-gray-600">
+                    <span class="text-lg font-bold text-gray-900">{{ resumen.vigentes }}</span>
+                    {{ resumen.vigentes === 1 ? 'certificado vigente' : 'certificados vigentes' }}
+                </p>
+                <div class="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-3 md:ml-auto md:max-w-xl">
+                    <div class="relative sm:col-span-2">
+                        <label for="buscar" class="sr-only">Buscar</label>
+                        <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        <input id="buscar" v-model="buscar" type="search" placeholder="Buscar por título, código o evento" class="campo pl-9" />
                     </div>
-                </div>
-
-                <!-- Mensajes de éxito/error -->
-                <div v-if="$page.props.flash?.success" class="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative">
-                    {{ $page.props.flash.success }}
-                </div>
-                <div v-if="$page.props.flash?.error" class="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
-                    {{ $page.props.flash.error }}
-                </div>
-
-                <!-- Filtros -->
-                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Buscar</label>
-                            <input
-                                v-model="search"
-                                type="text"
-                                placeholder="Buscar por título o código..."
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
-                            <select
-                                v-model="selectedTipo"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            >
-                                <option value="">Todos los tipos</option>
-                                <option v-for="tipo in tipos" :key="tipo" :value="tipo">
-                                    {{ getTipoFormateado(tipo) }}
-                                </option>
-                            </select>
-                        </div>
-                        <div class="flex items-end">
-                            <button
-                                @click="clearFilters"
-                                class="w-full bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
-                            >
-                                Limpiar Filtros
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Lista de certificados -->
-                <div v-if="filteredCertificados.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div
-                        v-for="certificado in filteredCertificados"
-                        :key="certificado.id"
-                        class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-                    >
-                        <!-- Header del certificado -->
-                        <div class="bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white">
-                            <div class="flex items-center justify-between">
-                                <div class="flex items-center">
-                                    <div class="w-12 h-12 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                        </svg>
-                                    </div>
-                                    <div class="ml-4">
-                                        <h3 class="text-lg font-bold">{{ certificado.titulo }}</h3>
-                                        <p class="text-blue-100 text-sm">{{ certificado.codigo }}</p>
-                                    </div>
-                                </div>
-                                <span :class="getEstadoBadgeClass(certificado.estado)" class="px-2 py-1 text-xs font-medium rounded-full">
-                                    {{ getEstadoFormateado(certificado.estado) }}
-                                </span>
-                            </div>
-                        </div>
-
-                        <!-- Contenido del certificado -->
-                        <div class="p-6">
-                            <div class="space-y-4">
-                                <!-- Descripción -->
-                                <div v-if="certificado.descripcion">
-                                    <p class="text-gray-600 text-sm">{{ certificado.descripcion }}</p>
-                                </div>
-
-                                <!-- Evento -->
-                                <div v-if="certificado.evento">
-                                    <div class="flex items-center text-gray-600">
-                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                        <span class="text-sm font-medium">{{ certificado.evento.titulo }}</span>
-                                    </div>
-                                </div>
-
-                                <!-- Tipo -->
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center text-gray-600">
-                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                                        </svg>
-                                        <span class="text-sm font-medium">Tipo:</span>
-                                    </div>
-                                    <span :class="getTipoBadgeClass(certificado.tipo)" class="px-2 py-1 text-xs font-medium rounded-full">
-                                        {{ getTipoFormateado(certificado.tipo) }}
-                                    </span>
-                                </div>
-
-                                <!-- Fecha de emisión -->
-                                <div class="flex items-center text-gray-600">
-                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                    </svg>
-                                    <span class="text-sm font-medium">Emitido el {{ formatDate(certificado.fecha_emision) }}</span>
-                                </div>
-
-                                <!-- Emisor -->
-                                <div class="flex items-center text-gray-600">
-                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                    </svg>
-                                    <span class="text-sm font-medium">Emitido por: {{ certificado.emisor.name }}</span>
-                                </div>
-                            </div>
-
-                            <!-- Acciones -->
-                            <div class="mt-6 flex space-x-3">
-                                <Link
-                                    :href="route('certificados.show', certificado.id)"
-                                    class="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-center"
-                                >
-                                    Ver Detalles
-                                </Link>
-                                <a
-                                    v-if="certificado.archivo_certificado"
-                                    :href="route('certificados.descargar', certificado.id)"
-                                    class="flex-1 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-center flex items-center justify-center"
-                                >
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                    Descargar PDF
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Mensaje cuando no hay certificados -->
-                <div v-else class="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-                    <div class="w-24 h-24 mx-auto mb-6 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
-                        <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-semibold text-gray-900 mb-2">No tienes certificados aún</h3>
-                    <p class="text-gray-600 mb-6">
-                        {{ search || selectedTipo ? 'No se encontraron certificados con los filtros aplicados.' : 'Los certificados aparecerán aquí cuando participes en eventos y actividades.' }}
-                    </p>
-                    <div v-if="!search && !selectedTipo" class="space-y-4">
-                        <p class="text-sm text-gray-500">¡Participa en eventos para obtener tus certificados!</p>
-                        <Link
-                            :href="route('eventos.index')"
-                            class="inline-flex items-center px-6 py-3 border border-transparent shadow-lg text-sm font-bold rounded-xl text-white bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 hover:shadow-xl"
-                        >
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            Ver Eventos Disponibles
-                        </Link>
-                    </div>
-                </div>
-
-                <!-- Paginación -->
-                <div v-if="certificados.links && certificados.links.length > 3" class="flex justify-center mt-8">
-                    <div class="flex space-x-2">
-                        <Link
-                            v-for="(link, index) in certificados.links"
-                            :key="index"
-                            :href="link.url"
-                            :class="[
-                                'px-3 py-2 text-sm font-medium rounded-md',
-                                link.active
-                                    ? 'bg-blue-600 text-white'
-                                    : link.url
-                                        ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            ]"
-                            v-html="link.label"
-                        />
+                    <div>
+                        <label for="tipo" class="sr-only">Tipo</label>
+                        <select id="tipo" v-model="tipo" class="campo">
+                            <option value="">Todos los tipos</option>
+                            <option v-for="(etiqueta, valor) in tipos" :key="valor" :value="valor">{{ etiqueta }}</option>
+                        </select>
                     </div>
                 </div>
             </div>
+
+            <!-- Tarjetas -->
+            <div v-if="certificados.data.length" class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                <article
+                    v-for="(c, i) in certificados.data"
+                    :key="c.id"
+                    :class="['animar-entrada tarjeta-interactiva flex flex-col overflow-hidden rounded-xl border bg-white shadow-sm', c.estado === 'revocado' ? 'border-red-200' : 'border-gray-200', `retraso-${(i % 6) + 1}`]"
+                >
+                    <!-- Franja tipo diploma -->
+                    <div :class="['relative px-5 pb-5 pt-6 text-center', c.estado === 'revocado' ? 'bg-gray-50' : 'bg-gradient-to-br from-blue-900 to-indigo-800']">
+                        <p :class="['text-[10px] font-bold tracking-[0.25em]', c.estado === 'revocado' ? 'text-gray-400' : 'text-blue-200']">CERTIFICADO</p>
+                        <p :class="['mt-1 text-sm font-semibold uppercase tracking-wider', c.estado === 'revocado' ? 'text-gray-500' : 'text-amber-300']">de {{ (tipos[c.tipo] ?? c.tipo).toLowerCase() }}</p>
+                        <span v-if="c.estado === 'revocado'" class="absolute right-3 top-3 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700">Revocado</span>
+                    </div>
+
+                    <div class="flex flex-1 flex-col p-5">
+                        <h2 class="line-clamp-2 break-words text-base font-semibold text-gray-900">{{ c.titulo }}</h2>
+                        <dl class="mt-3 space-y-1.5 text-sm text-gray-600">
+                            <div v-if="c.evento" class="flex items-start gap-2">
+                                <dt class="sr-only">Evento</dt>
+                                <svg class="mt-0.5 h-4 w-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                <dd class="min-w-0 break-words">{{ c.evento.titulo }}</dd>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <dt class="sr-only">Fecha de emisión</dt>
+                                <svg class="h-4 w-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                <dd>Emitido el {{ fechaLarga(c.fecha_emision) }}</dd>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <dt class="sr-only">Código</dt>
+                                <svg class="h-4 w-4 shrink-0 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" /></svg>
+                                <dd class="font-mono text-xs">{{ c.codigo }}</dd>
+                            </div>
+                        </dl>
+
+                        <div class="mt-auto flex gap-2 pt-5">
+                            <Link :href="route('certificados.show', c.id)" class="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-center text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                Ver detalle
+                            </Link>
+                            <a
+                                v-if="c.estado !== 'revocado'"
+                                :href="route('certificados.descargar', c.id)"
+                                class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+                            >
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                Descargar
+                            </a>
+                        </div>
+                    </div>
+                </article>
+            </div>
+
+            <!-- Sin certificados -->
+            <div v-else class="animar-entrada rounded-xl border border-dashed border-gray-300 bg-white px-6 py-14 text-center">
+                <span class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-indigo-50">
+                    <svg class="h-8 w-8 text-indigo-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /></svg>
+                </span>
+                <h3 class="mt-4 text-base font-semibold text-gray-900">{{ hayFiltros ? 'Ningún certificado coincide' : 'Aún no tienes certificados' }}</h3>
+                <p class="mx-auto mt-1 max-w-sm text-sm text-gray-500">
+                    {{ hayFiltros ? 'Prueba con otra búsqueda.' : 'Aparecerán aquí cuando la coordinación los emita por tu participación en eventos y actividades.' }}
+                </p>
+                <Link v-if="!hayFiltros" :href="route('eventos.index')" class="mt-5 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
+                    Ver eventos disponibles
+                </Link>
+            </div>
+
+            <Pagination
+                v-if="certificados.last_page > 1"
+                :links="certificados.links"
+                :from="certificados.from"
+                :to="certificados.to"
+                :total="certificados.total"
+            />
         </div>
     </AppLayout>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
-import { Head, Link, router } from '@inertiajs/vue3';
+import { computed, ref, watch } from 'vue';
+import { Link, router } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import AvisoFlash from '@/Components/AvisoFlash.vue';
+import Pagination from '@/Components/Pagination.vue';
 
 const props = defineProps({
     certificados: Object,
-    tipos: Array,
-    estados: Array,
+    tipos: Object,
+    estados: Object,
     filtros: Object,
-    auth: Object,
+    resumen: Object,
 });
 
-const search = ref(props.filtros?.buscar || '');
-const selectedTipo = ref(props.filtros?.tipo || '');
+const buscar = ref(props.filtros?.buscar ?? '');
+const tipo = ref(props.filtros?.tipo ?? '');
+const hayFiltros = computed(() => Boolean(buscar.value || tipo.value));
 
-const filteredCertificados = computed(() => {
-    return props.certificados?.data || [];
-});
-
-const clearFilters = () => {
-    search.value = '';
-    selectedTipo.value = '';
-    applyFilters();
-};
-
-const applyFilters = () => {
+const aplicar = () => {
     router.get(route('mis-certificados'), {
-        buscar: search.value,
-        tipo: selectedTipo.value,
-    }, {
-        preserveState: true,
-        replace: true,
-    });
+        buscar: buscar.value || undefined,
+        tipo: tipo.value || undefined,
+    }, { preserveState: true, preserveScroll: true, replace: true });
 };
 
-// Aplicar filtros con debounce
-let searchTimeout;
-watch([search, selectedTipo], () => {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(applyFilters, 300);
-});
+let espera;
+watch(buscar, () => { clearTimeout(espera); espera = setTimeout(aplicar, 350); });
+watch(tipo, aplicar);
 
-const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-};
-
-const getTipoFormateado = (tipo) => {
-    const tipos = {
-        'participacion': 'Participación',
-        'ponencia': 'Ponencia',
-        'poster': 'Póster',
-        'organizacion': 'Organización',
-        'voluntariado': 'Voluntariado',
-    };
-    return tipos[tipo] || tipo;
-};
-
-const getEstadoFormateado = (estado) => {
-    const estados = {
-        'activo': 'Activo',
-        'revocado': 'Revocado',
-    };
-    return estados[estado] || estado;
-};
-
-const getTipoBadgeClass = (tipo) => {
-    const classes = {
-        'participacion': 'bg-blue-100 text-blue-800',
-        'ponencia': 'bg-green-100 text-green-800',
-        'poster': 'bg-purple-100 text-purple-800',
-        'organizacion': 'bg-yellow-100 text-yellow-800',
-        'voluntariado': 'bg-pink-100 text-pink-800',
-    };
-    return classes[tipo] || 'bg-gray-100 text-gray-800';
-};
-
-const getEstadoBadgeClass = (estado) => {
-    const classes = {
-        'activo': 'bg-green-100 text-green-800',
-        'revocado': 'bg-red-100 text-red-800',
-    };
-    return classes[estado] || 'bg-gray-100 text-gray-800';
+const fechaLarga = (valor) => {
+    if (!valor) return '';
+    const [a, m, d] = String(valor).slice(0, 10).split('-').map(Number);
+    return new Date(a, m - 1, d).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
 };
 </script>
 
-
-
-
-
-
-
+<style scoped>
+.campo {
+    @apply block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500;
+}
+</style>

@@ -6,8 +6,6 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
-use App\Models\User;
-use Illuminate\Support\Facades\Hash;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
@@ -45,16 +43,9 @@ class RolesAndPermissionsSeeder extends Seeder
         $estudianteRole->syncPermissions(['proyectos.crear']);
         $juradoRole->syncPermissions(['evaluaciones.realizar']);
 
-        // Crear usuario administrador
-        $admin = User::firstOrCreate(
-            ['email' => 'admin@semilleros.edu'],
-            [
-                'name' => 'Admin General',
-                'password' => Hash::make('admin123'),
-                'rol_id' => $adminRole->id,
-                'estado' => 'activo',
-            ]
-        );
-        $admin->assignRole($adminRole);
+        // El primer administrador ya no se crea aquí con una contraseña fija
+        // publicada en el código: se crea con
+        //   php artisan semilleros:crear-administrador
+        // y los datos de ejemplo están en DatosDemostracionSeeder.
     }
 }

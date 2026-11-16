@@ -148,7 +148,7 @@
                     </div>
                     <div class="detail-item">
                         <div class="detail-label">Semillero</div>
-                        <div class="detail-value">{{ $semillero->nombre ?? 'N/A' }}</div>
+                        <div class="detail-value">{{ $semillero->nombre ?? 'Sin semillero' }}</div>
                     </div>
                 </div>
 
@@ -177,7 +177,7 @@
             
             <div style="text-align: center;">
                 <a href="{{ url('/proyectos/' . $proyecto->id) }}" class="btn">Ver Proyecto</a>
-                <a href="{{ url('/dashboard') }}" class="btn">Ir al Dashboard</a>
+                <a href="{{ url('/dashboard') }}" class="btn">Ir al panel principal</a>
             </div>
         </div>
 

@@ -4,6 +4,7 @@ import Avatar from '@/Components/Avatar.vue';
 import Pagination from '@/Components/Pagination.vue';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
+import { formatoNota, nivelNota } from '@/utils/notas';
 
 const props = defineProps({
     evaluaciones: { type: Object, default: () => ({ data: [] }) },
@@ -47,26 +48,10 @@ const hayFiltros = computed(() => !!(search.value || rubricaId.value));
  * ("4.85"), de modo que llamar a .toFixed() sobre ella lanzaba una excepción
  * y dejaba la pantalla en blanco. Se convierte a número antes de formatear.
  */
-const formatNota = (nota) => {
-    const valor = Number(nota);
-    return nota === null || nota === undefined || Number.isNaN(valor) ? 'N/A' : valor.toFixed(1);
-};
-
-const colorNota = (nota) => {
-    const valor = Number(nota);
-    if (nota === null || nota === undefined || Number.isNaN(valor)) return 'text-gray-400';
-    if (valor >= 90) return 'text-emerald-600';
-    if (valor >= 60) return 'text-blue-600';
-    return 'text-red-600';
-};
-
-const fondoNota = (nota) => {
-    const valor = Number(nota);
-    if (nota === null || nota === undefined || Number.isNaN(valor)) return 'bg-gray-50';
-    if (valor >= 90) return 'bg-emerald-50';
-    if (valor >= 60) return 'bg-blue-50';
-    return 'bg-red-50';
-};
+// Escala única del sistema (ver utils/notas.js).
+const formatNota = (nota) => formatoNota(nota);
+const colorNota = (nota) => nivelNota(nota).texto_color;
+const fondoNota = (nota) => nivelNota(nota).fondo;
 
 const formatDate = (date) => {
     if (!date) return 'Sin fecha';
@@ -207,7 +192,7 @@ const formatDate = (date) => {
                     <select
                         v-model="rubricaId"
                         @change="aplicarFiltros"
-                        class="rounded-lg border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        class="w-full min-w-0 max-w-full rounded-lg border-gray-300 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:w-auto"
                     >
                         <option value="">Todas las rúbricas</option>
                         <option v-for="r in rubricas" :key="r.id" :value="r.id">{{ r.nombre }}</option>

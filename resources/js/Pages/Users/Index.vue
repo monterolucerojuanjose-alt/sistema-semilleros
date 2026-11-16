@@ -55,7 +55,7 @@
                                 <input
                                     v-model="search"
                                     type="text"
-                                placeholder="Nombre o email..."
+                                placeholder="Nombre o correo electrónico…"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
@@ -101,7 +101,7 @@
                                         Usuario
                                     </th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Email
+                                        Correo electrónico
                                     </th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Rol

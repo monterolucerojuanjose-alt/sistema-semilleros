@@ -8,6 +8,9 @@ export default {
         './storage/framework/views/*.php',
         './resources/views/**/*.blade.php',
         './resources/js/**/*.vue',
+        // Las clases de color de la escala de notas viven en utils/notas.js;
+        // sin esta línea Tailwind no las ve y las elimina del CSS final.
+        './resources/js/**/*.js',
     ],
 
     theme: {

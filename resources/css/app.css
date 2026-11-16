@@ -12,6 +12,51 @@
     html {
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        /* Safari de iPhone agranda el texto al girar la pantalla si no se fija. */
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Un documento nunca debe desplazarse de lado: si algo se desborda, se
+       recorta en lugar de mover toda la pantalla en el celular. */
+    body {
+        overflow-x: hidden;
+        /* Una palabra larga sin espacios (un enlace, un código, un título
+           escrito sin espacios) baja de renglón en lugar de salirse de su
+           tarjeta y empujar los botones fuera de la pantalla. */
+        overflow-wrap: break-word;
+    }
+
+    /* Safari de iPhone hace zoom automático al enfocar un campo con letra menor
+       a 16 px, y ya no vuelve solo. Se fuerza 16 px sólo en pantallas táctiles
+       estrechas; en escritorio se conserva el tamaño del diseño. */
+    @media (max-width: 767px) {
+        input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+        select,
+        textarea {
+            font-size: 16px !important;
+        }
+    }
+
+    /* Un contenedor con desplazamiento horizontal sólo recorta a sus hijos con
+       position:absolute si él mismo está posicionado. Las tablas llevan textos
+       .sr-only (absolutos) para lectores de pantalla: sin esta regla, ese
+       span de 1 px quedaba en el borde derecho de la tabla y estiraba toda la
+       página (en Auditoría, 364 px de desplazamiento lateral en escritorio). */
+    .overflow-x-auto,
+    .overflow-auto {
+        position: relative;
+    }
+
+    /* Los campos de fecha de iOS ignoran el ancho del contenedor y lo desbordan. */
+    input[type='date'],
+    input[type='datetime-local'],
+    input[type='time'],
+    input[type='month'] {
+        min-width: 0;
+        max-width: 100%;
+        min-height: 2.5rem;
     }
 
     /* Anillo de foco visible y uniforme: necesario para navegar con teclado. */
@@ -39,6 +84,16 @@
 
     ::-webkit-scrollbar-thumb:hover {
         background-color: theme('colors.gray.400');
+    }
+
+    /* Firefox no entiende ::-webkit-scrollbar; usa sus propias propiedades.
+       Se limita a los navegadores sin soporte webkit para no anular, en
+       Chrome moderno, el estilo de arriba. */
+    @supports not selector(::-webkit-scrollbar) {
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: theme('colors.gray.300') transparent;
+        }
     }
 }
 
@@ -92,6 +147,18 @@
 }
 
 @layer utilities {
+    /* Alto de pantalla completa. En Safari/Chrome móvil 100vh incluye la barra
+       de direcciones y deja contenido tapado; dvh la descuenta. El primer valor
+       es el respaldo para navegadores que aún no conocen dvh. */
+    .min-h-app {
+        min-height: 100vh;
+        min-height: 100dvh;
+    }
+
+    .pb-seguro {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
     .animar-entrada {
         animation: aparecer 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
     }

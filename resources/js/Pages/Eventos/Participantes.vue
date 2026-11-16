@@ -47,7 +47,7 @@
                             <input
                                 v-model="search"
                                 type="text"
-                                placeholder="Buscar por nombre o email..."
+                                placeholder="Buscar por nombre o correo electrónico…"
                                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />
                         </div>
@@ -68,7 +68,7 @@
                 </div>
 
                 <!-- Lista de Participantes -->
-                <div v-if="filteredParticipantes.length > 0" class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <div v-if="filteredParticipantes.length > 0" class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
@@ -76,7 +76,7 @@
                                     Estudiante
                                 </th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Email
+                                    Correo electrónico
                                 </th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     Fecha Inscripción

@@ -312,17 +312,43 @@ class Certificate extends Model
      */
     public function getTipoFormateadoAttribute(): string
     {
-        return match($this->tipo) {
-            'participacion' => 'Participación',
-            'ponencia' => 'Ponencia',
-            'poster' => 'Póster',
-            'organizacion' => 'Organización',
-            'voluntariado' => 'Voluntariado',
-            // «ucfirst» pone en mayúscula la primera letra de cualquier tipo
-            // no contemplado, para que al menos se lea con dignidad.
-            default => ucfirst($this->tipo),
-        };
+        // «ucfirst» pone en mayúscula la primera letra de cualquier tipo
+        // no contemplado, para que al menos se lea con dignidad.
+        return self::TIPOS[$this->tipo] ?? ucfirst((string) $this->tipo);
     }
+
+    /**
+     * Tipos de certificado y su nombre para mostrar. Es la única lista: la
+     * usan la validación, las pantallas y el PDF generado.
+     *
+     * @var array<string, string>
+     */
+    public const TIPOS = [
+        'participacion' => 'Participación',
+        'ponencia' => 'Ponencia',
+        'poster' => 'Póster',
+        'organizacion' => 'Organización',
+        'voluntariado' => 'Voluntariado',
+    ];
+
+    /**
+     * Frase con la que el PDF explica por qué se otorga cada tipo.
+     *
+     * @var array<string, string>
+     */
+    public const MOTIVOS = [
+        'participacion' => 'por su participación en',
+        'ponencia' => 'por la presentación de su ponencia en',
+        'poster' => 'por la presentación de su trabajo en modalidad póster en',
+        'organizacion' => 'por su apoyo en la organización de',
+        'voluntariado' => 'por su labor de voluntariado en',
+    ];
+
+    /** @var array<string, string> */
+    public const ESTADOS = [
+        'activo' => 'Vigente',
+        'revocado' => 'Revocado',
+    ];
 
     /**
      * Estado con el formato con el que se muestra en pantalla.
@@ -333,10 +359,6 @@ class Certificate extends Model
      */
     public function getEstadoFormateadoAttribute(): string
     {
-        return match($this->estado) {
-            'activo' => 'Activo',
-            'revocado' => 'Revocado',
-            default => ucfirst($this->estado),
-        };
+        return self::ESTADOS[$this->estado] ?? ucfirst((string) $this->estado);
     }
 }

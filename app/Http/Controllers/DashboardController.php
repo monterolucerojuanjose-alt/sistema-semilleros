@@ -7,7 +7,7 @@ use App\Models\User;
 use App\Models\Proyecto;
 use App\Models\InscripcionEvento;
 use App\Models\Evaluacion;
-use App\Models\Certificado;
+use App\Models\Certificate;
 use App\Models\Rubrica;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -146,7 +146,7 @@ class DashboardController extends Controller
             'totalSemilleros' => Semillero::count(),
             'totalInscripciones' => InscripcionEvento::count(),
             'totalEvaluaciones' => Evaluacion::count(),
-            'totalCertificados' => Certificado::count(),
+            'totalCertificados' => Certificate::count(),
             'proyectosAprobados' => Proyecto::where('estado', 'Aprobado')->count(),
             'proyectosPendientes' => Proyecto::whereIn('estado', ['Inscrito', 'En revisión'])->count(),
             'proyectosRechazados' => Proyecto::where('estado', 'Rechazado')->count(),
@@ -339,7 +339,7 @@ class DashboardController extends Controller
                     'totalUsuarios' => User::count(),
                     'totalProyectos' => Proyecto::count(),
                     'totalSemilleros' => Semillero::count(),
-                    'totalCertificados' => Certificado::count(),
+                    'totalCertificados' => Certificate::count(),
                     'semillerosActivos' => Semillero::where('estado', 'activo')->count(),
                     'proyectosAprobados' => Proyecto::where('estado', 'Aprobado')->count(),
                     'totalEvaluaciones' => Evaluacion::count(),
@@ -351,7 +351,7 @@ class DashboardController extends Controller
                     'totalUsuarios' => User::count(),
                     'totalProyectos' => Proyecto::count(),
                     'totalSemilleros' => Semillero::count(),
-                    'totalCertificados' => Certificado::count(),
+                    'totalCertificados' => Certificate::count(),
                     'semillerosActivos' => Semillero::where('estado', 'activo')->count(),
                     'proyectosAprobados' => Proyecto::where('estado', 'Aprobado')->count(),
                     'totalEvaluaciones' => Evaluacion::count(),
@@ -383,7 +383,7 @@ class DashboardController extends Controller
                     'inscripcionesActivas' => $user->semillerosAprobados()->count(),
                     'solicitudesPendientes' => $user->solicitudesPendientes()->count(),
                     'semillerosDisponibles' => Semillero::where('estado', 'activo')->count(),
-                    'misCertificados' => Certificado::where('usuario_id', $user->id)->count(),
+                    'misCertificados' => Certificate::where('user_id', $user->id)->count(),
                 ];
 
             case 'Jurado':

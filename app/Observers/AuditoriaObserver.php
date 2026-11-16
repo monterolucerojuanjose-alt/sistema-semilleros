@@ -110,7 +110,13 @@ class AuditoriaObserver
         $detalles = [];
 
         foreach ($cambios as $campo => $nuevoValor) {
-            $valorAnterior = $originales[$campo] ?? null;
+            // getOriginal() devuelve los valores ya convertidos por los $casts
+            // (un arreglo para «metadata», una fecha Carbon…). Concatenar un
+            // arreglo como texto lanzaba «Array to string conversion» y hacía
+            // fallar con error 500 la edición de cualquier registro con un
+            // campo de ese tipo, como los certificados.
+            $valorAnterior = $this->comoTexto($originales[$campo] ?? null);
+            $nuevoValor = $this->comoTexto($nuevoValor);
 
             // Formatear valores especiales
             if ($campo === 'estado') {
@@ -125,6 +131,18 @@ class AuditoriaObserver
         }
 
         return implode(', ', $detalles);
+    }
+
+    /** Representación legible de un valor para el detalle de auditoría. */
+    private function comoTexto($valor): string
+    {
+        return match (true) {
+            $valor === null, $valor === '' => '(vacío)',
+            is_bool($valor) => $valor ? 'sí' : 'no',
+            is_array($valor), is_object($valor) && !method_exists($valor, '__toString')
+                => json_encode($valor, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            default => (string) $valor,
+        };
     }
 
     /**

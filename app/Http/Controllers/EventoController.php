@@ -267,7 +267,7 @@ class EventoController extends Controller
         $validated = $request->validate([
             'titulo_proyecto' => 'required|string|max:255',
             'descripcion_proyecto' => 'required|string|max:2000',
-            'archivo_proyecto' => 'required|file|mimes:pdf,doc,docx|max:20480',
+            'archivo_proyecto' => 'required|file|mimes:pdf,doc,docx|max:10240',
             'modalidad' => 'required|string|in:' . implode(',', CatalogosEvento::MODALIDADES),
             'area_participacion' => 'required|string|in:' . implode(',', CatalogosEvento::AREAS_PARTICIPACION),
             'participantes' => 'required|array|min:1',
@@ -278,15 +278,15 @@ class EventoController extends Controller
             'descripcion_proyecto.required' => 'La descripción del proyecto es obligatoria.',
             'archivo_proyecto.required' => 'Debes subir el archivo del proyecto.',
             'archivo_proyecto.mimes' => 'El archivo debe ser PDF, DOC o DOCX.',
-            'archivo_proyecto.max' => 'El archivo no puede superar los 10MB.',
+            'archivo_proyecto.max' => 'El archivo no puede superar los 10 MB.',
             'modalidad.required' => 'Debes seleccionar la modalidad de participación.',
             'modalidad.in' => 'La modalidad seleccionada no es válida.',
             'area_participacion.required' => 'Debes seleccionar el área de participación.',
             'area_participacion.in' => 'El área de participación seleccionada no es válida.',
             'participantes.required' => 'Debes agregar al menos un participante.',
             'participantes.*.nombre.required' => 'El nombre del participante es obligatorio.',
-            'participantes.*.email.required' => 'El email del participante es obligatorio.',
-            'participantes.*.email.email' => 'El email del participante debe ser valido.',
+            'participantes.*.email.required' => 'El correo electrónico del participante es obligatorio.',
+            'participantes.*.email.email' => 'El correo electrónico del participante no es válido.',
         ]);
 
         try {
@@ -354,7 +354,7 @@ class EventoController extends Controller
         $participacion->update(['estado' => 'cancelado']);
 
         return redirect()->back()
-            ->with('success', 'Tu inscripcion ha sido cancelada.');
+            ->with('success', 'Tu inscripción ha sido cancelada.');
     }
 
     public function participantes(Evento $evento): Response
@@ -362,7 +362,7 @@ class EventoController extends Controller
         $user = auth()->user();
 
         if (!$user->hasRole(['Administrador', 'Coordinador'])) {
-            abort(403, 'No tienes permisos para ver esta informacion.');
+            abort(403, 'No tienes permisos para ver esta información.');
         }
 
         $participantes = EventoParticipante::where('evento_id', $evento->id)
@@ -384,7 +384,7 @@ class EventoController extends Controller
         $user = auth()->user();
 
         if (!$user->hasRole(['Administrador', 'Coordinador'])) {
-            abort(403, 'No tienes permisos para ver esta informacion.');
+            abort(403, 'No tienes permisos para ver esta información.');
         }
 
         $propuestas = EventoParticipante::pendientes()
@@ -405,7 +405,7 @@ class EventoController extends Controller
         $user = auth()->user();
 
         if (!$user->hasRole(['Administrador', 'Coordinador'])) {
-            abort(403, 'No tienes permisos para ver esta informacion.');
+            abort(403, 'No tienes permisos para ver esta información.');
         }
 
         $participante->load(['evento', 'usuario', 'revisor']);
@@ -455,7 +455,7 @@ class EventoController extends Controller
 
         return redirect()->back()->with(
             'success',
-            'Propuesta aprobada y evaluador asignado exitosamente. El estudiante puede ver la informacion en "Mis Inscripciones".'
+            'Propuesta aprobada y evaluador asignado exitosamente. El estudiante puede ver la información en «Mis inscripciones».'
         );
     }
 
@@ -500,7 +500,7 @@ class EventoController extends Controller
         $user = auth()->user();
 
         if (!$user->hasRole(['Jurado', 'Docente/Tutor'])) {
-            abort(403, 'No tienes permisos para acceder a esta seccion.');
+            abort(403, 'No tienes permisos para acceder a esta sección.');
         }
 
         $asignados = EventoParticipante::where('evaluador_id', $user->id)
@@ -637,7 +637,7 @@ class EventoController extends Controller
         });
 
         return redirect()->route('proyectos.asignados')
-            ->with('success', 'Evaluacion guardada exitosamente. El estudiante podra ver su calificacion.');
+            ->with('success', 'Evaluación guardada correctamente. El estudiante ya puede ver su calificación.');
     }
 
     /**

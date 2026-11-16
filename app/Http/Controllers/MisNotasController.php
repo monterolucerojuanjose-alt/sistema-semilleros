@@ -148,10 +148,8 @@ class MisNotasController extends Controller
 
                 'observaciones' => $p->analisis_proyecto,
 
-                // Solo las propuestas de evento tienen ficha de detalle con
-                // fortalezas y recomendaciones. En las demás va null, y la
-                // pantalla oculta el botón «Ver detalle».
                 'detalle_id' => $evaluadas ? $p->id : null,
+                'detalle_url' => $evaluadas ? route('mis-notas.show', $p->id) : null,
             ]);
     }
 
@@ -187,8 +185,10 @@ class MisNotasController extends Controller
                 'estado_texto' => $evaluadas ? 'Evaluado' : 'Pendiente',
                 'observaciones' => $e->observaciones,
 
-                // Los proyectos de semillero no tienen ficha de detalle.
+                // Antes los proyectos de semillero no tenían ficha de detalle,
+                // así que el estudiante no veía el puntaje por criterio.
                 'detalle_id' => null,
+                'detalle_url' => $evaluadas ? route('mis-notas.proyecto', $e->id) : null,
             ]);
     }
 
@@ -244,13 +244,92 @@ class MisNotasController extends Controller
                 ->with('error', 'Esta propuesta aún no ha sido evaluada.');
         }
 
-        $propuesta->load(['evento', 'evaluador', 'usuario']);
+        $propuesta->load(['evento:id,titulo', 'evaluador:id,name']);
 
-        return Inertia::render('Estudiante/DetalleNota', [
-            'propuesta' => $propuesta,
-            'auth' => [
-                'user' => $user->load('roles'),
-            ],
+        // Desde que las propuestas de evento se califican con rúbrica, el
+        // puntaje de cada criterio queda en «evaluaciones». Se toma la última.
+        $evaluacion = Evaluacion::where('evento_participante_id', $propuesta->id)->latest('id')->first();
+
+        $datos = array_filter([
+            'Modalidad' => $propuesta->modalidad,
+            'Área de participación' => $propuesta->area_participacion,
+            'Aula' => $propuesta->aula,
+            'Horario' => $propuesta->horario,
         ]);
+
+        return $this->renderDetalle([
+            'tipo' => 'evento',
+            'tipo_texto' => 'Propuesta de evento',
+            'titulo' => $propuesta->titulo_proyecto,
+            'descripcion' => $propuesta->descripcion_proyecto,
+            'contexto_etiqueta' => 'Evento',
+            'contexto' => $propuesta->evento?->titulo ?? 'Evento eliminado',
+            'evaluador' => $propuesta->evaluador?->name,
+            'fecha' => $propuesta->fecha_evaluacion,
+            'nota' => (float) $propuesta->nota_final,
+            'rubrica' => $evaluacion?->desglosePorCriterio(),
+            'retroalimentacion' => array_values(array_filter([
+                $this->bloque('Análisis general', $propuesta->analisis_proyecto, 'neutro'),
+                $this->bloque('Fortalezas', $propuesta->fortalezas, 'positivo'),
+                $this->bloque('Aspectos por mejorar', $propuesta->debilidades, 'mejora'),
+                $this->bloque('Recomendaciones', $propuesta->recomendaciones, 'sugerencia'),
+                $this->bloque('Observaciones del jurado', $evaluacion?->observaciones, 'neutro'),
+            ])),
+            'datos' => collect($datos)->map(fn ($valor, $etiqueta) => ['etiqueta' => $etiqueta, 'valor' => $valor])->values(),
+            'archivo_url' => $propuesta->archivo_proyecto ? asset('storage/' . $propuesta->archivo_proyecto) : null,
+        ]);
+    }
+
+    /**
+     * Detalle de la evaluación con rúbrica de un proyecto de semillero.
+     *
+     * Antes no existía: el estudiante veía la nota en el listado pero no
+     * cuánto obtuvo en cada criterio ni los comentarios del jurado.
+     */
+    public function showProyecto(Evaluacion $evaluacion): Response|RedirectResponse
+    {
+        $evaluacion->load(['proyecto:id,titulo,resumen,autor_id,semillero_id', 'proyecto.semillero:id,nombre', 'jurado:id,name', 'rubrica:id,nombre,descripcion', 'detalleEvaluaciones.criterio']);
+
+        // Sólo el autor del proyecto puede ver su evaluación.
+        if (!$evaluacion->proyecto || $evaluacion->proyecto->autor_id !== auth()->id()) {
+            abort(403, 'No tienes permisos para ver esta evaluación.');
+        }
+
+        if ($evaluacion->estado !== 'Evaluado') {
+            return redirect()->route('mis-notas')
+                ->with('error', 'Esta evaluación todavía no se ha completado.');
+        }
+
+        return $this->renderDetalle([
+            'tipo' => 'proyecto',
+            'tipo_texto' => 'Proyecto de semillero',
+            'titulo' => $evaluacion->proyecto->titulo,
+            'descripcion' => $evaluacion->proyecto->resumen,
+            'contexto_etiqueta' => 'Semillero',
+            'contexto' => $evaluacion->proyecto->semillero?->nombre ?? 'Sin semillero',
+            'evaluador' => $evaluacion->jurado?->name,
+            'fecha' => $evaluacion->updated_at,
+            'nota' => (float) $evaluacion->nota_final,
+            'rubrica' => $evaluacion?->desglosePorCriterio(),
+            'retroalimentacion' => array_values(array_filter([
+                $this->bloque('Observaciones del jurado', $evaluacion->observaciones, 'neutro'),
+            ])),
+            'datos' => [],
+            'archivo_url' => null,
+        ]);
+    }
+
+    /** Ambas fichas (evento y proyecto) comparten pantalla y estructura. */
+    private function renderDetalle(array $nota): Response
+    {
+        return Inertia::render('Estudiante/DetalleNota', [
+            'nota' => $nota,
+            'notaAprobatoria' => self::NOTA_APROBATORIA,
+        ]);
+    }
+
+    private function bloque(string $titulo, ?string $texto, string $tono): ?array
+    {
+        return filled($texto) ? ['titulo' => $titulo, 'texto' => $texto, 'tono' => $tono] : null;
     }
 }

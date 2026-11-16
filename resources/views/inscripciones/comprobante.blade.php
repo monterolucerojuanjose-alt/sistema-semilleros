@@ -11,15 +11,19 @@
             line-height: 1.4;
             color: #333;
             margin: 0;
-            padding: 20px;
+            padding: 0;
         }
+
+        @page { margin: 16mm 16mm 14mm 16mm; }
 
         .header {
             text-align: center;
             border-bottom: 3px solid #2563eb;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
+            padding-bottom: 14px;
+            margin-bottom: 20px;
         }
+
+        .header img { width: 16mm; height: 16mm; margin-bottom: 6px; }
 
         .header h1 {
             color: #2563eb;
@@ -36,11 +40,11 @@
         }
 
         .content {
-            margin-bottom: 30px;
+            margin-bottom: 16px;
         }
 
         .section {
-            margin-bottom: 25px;
+            margin-bottom: 16px;
             background-color: #f8fafc;
             padding: 15px;
             border-radius: 8px;
@@ -92,6 +96,7 @@
             color: #1e40af;
         }
 
+        .status-en-revision,
         .status-revision {
             background-color: #fef3c7;
             color: #d97706;
@@ -108,25 +113,27 @@
         }
 
         .footer {
-            margin-top: 40px;
-            padding-top: 20px;
+            margin-top: 18px;
+            padding-top: 12px;
             border-top: 1px solid #e5e7eb;
             text-align: center;
             color: #6b7280;
             font-size: 10px;
         }
 
-        .qr-placeholder {
-            width: 100px;
-            height: 100px;
-            border: 2px dashed #d1d5db;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 20px auto;
-            font-size: 10px;
-            color: #6b7280;
+        /* Recuadro del código de verificación (antes era un «Código QR» vacío,
+           sin QR, que daba la impresión de un documento sin terminar). */
+        .verificacion {
+            margin: 16px auto 0 auto;
+            width: 70%;
+            border: 1px solid #cbd5e1;
+            background-color: #f8fafc;
+            text-align: center;
+            padding: 10px;
         }
+        .verificacion .etiqueta { font-size: 9px; letter-spacing: 1px; color: #64748b; text-transform: uppercase; }
+        .verificacion .codigo { font-size: 16px; font-weight: bold; letter-spacing: 1px; color: #1e40af; margin-top: 2px; }
+        .verificacion .nota { font-size: 9px; color: #94a3b8; margin-top: 2px; }
 
         .observaciones {
             background-color: #fffbeb;
@@ -145,8 +152,12 @@
 </head>
 <body>
     <div class="header">
+        @if(!empty($logo))
+            <img src="{{ $logo }}" alt="">
+        @endif
         <h1>COMPROBANTE DE INSCRIPCIÓN</h1>
-        <h2>Encuentro Institucional de Semilleros de Investigación</h2>
+        {{-- Antes decía siempre «Encuentro Institucional…», fuera cual fuera el evento. --}}
+        <h2>{{ $inscripcion->evento->titulo ?? 'Evento de semilleros de investigación' }}</h2>
     </div>
 
     <div class="content">
@@ -160,14 +171,14 @@
                 </div>
                 <div class="info-row">
                     <div class="info-label">Tipo de Participación:</div>
-                    <div class="info-value">{{ $inscripcion->tipo === 'ponencia' ? 'Ponencia' : 'Póster' }}</div>
+                    <div class="info-value">{{ \App\Support\Etiquetas::tipoInscripcion($inscripcion->tipo) }}</div>
                 </div>
                 <div class="info-row">
                     <div class="info-label">Estado:</div>
                     <div class="info-value">
-                        <span class="status-badge status-{{ strtolower(str_replace(' ', '', $inscripcion->estado)) }}">
-                            {{ $inscripcion->estado }}
-                        </span>
+                        {{-- Str::slug: «En revisión» → «en-revision». Antes la clase salía
+                             «status-enrevisión», no existía y la insignia no tenía color. --}}
+                        <span class="status-badge status-{{ \Illuminate\Support\Str::slug($inscripcion->estado) }}">{{ \App\Support\Etiquetas::estado($inscripcion->estado) }}</span>
                     </div>
                 </div>
                 <div class="info-row">
@@ -183,7 +194,7 @@
             <div class="info-grid">
                 <div class="info-row">
                     <div class="info-label">Título del Proyecto:</div>
-                    <div class="info-value">{{ $inscripcion->proyecto->titulo }}</div>
+                    <div class="info-value">{{ $inscripcion->proyecto->titulo ?? 'Proyecto eliminado' }}</div>
                 </div>
                 <div class="info-row">
                     <div class="info-label">Código del Proyecto:</div>
@@ -194,12 +205,12 @@
                     <div class="info-value">{{ $inscripcion->proyecto->autor->name }}</div>
                 </div>
                 <div class="info-row">
-                    <div class="info-label">Email del Autor:</div>
+                    <div class="info-label">Correo del autor:</div>
                     <div class="info-value">{{ $inscripcion->proyecto->autor->email }}</div>
                 </div>
                 <div class="info-row">
                     <div class="info-label">Semillero:</div>
-                    <div class="info-value">{{ $inscripcion->proyecto->semillero->nombre }}</div>
+                    <div class="info-value">{{ $inscripcion->proyecto->semillero->nombre ?? 'Sin semillero' }}</div>
                 </div>
             </div>
         </div>
@@ -220,17 +231,16 @@
         </div>
         @endif
 
-        <!-- Código QR placeholder -->
-        <div class="qr-placeholder">
-            Código QR<br>
-            {{ $inscripcion->codigo_inscripcion }}
+        <div class="verificacion">
+            <div class="etiqueta">Código de verificación</div>
+            <div class="codigo">{{ $inscripcion->codigo_inscripcion }}</div>
+            <div class="nota">Presente este código en la mesa de registro del evento.</div>
         </div>
     </div>
 
     <div class="footer">
         <p><strong>Este comprobante es válido únicamente para el proyecto y participante indicados.</strong></p>
-        <p>Documento generado el {{ $fecha_generacion }}</p>
-        <p>Para consultas, contactar a la coordinación de semilleros de investigación</p>
+        <p>Documento generado el {{ $fecha_generacion }} · Para consultas, contacte a la coordinación de semilleros de investigación.</p>
     </div>
 </body>
 </html>

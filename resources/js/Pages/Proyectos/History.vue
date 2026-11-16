@@ -58,7 +58,7 @@
                                             v-if="index === 0"
                                             class="ml-3 inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800"
                                         >
-                                            Ultima version
+                                            Última versión
                                         </span>
                                     </div>
 
@@ -72,7 +72,7 @@
                                             <p class="text-gray-600">{{ formatDate(version.created_at) }}</p>
                                         </div>
                                         <div>
-                                            <label class="mb-1 block text-sm font-medium text-gray-700">Tamano</label>
+                                            <label class="mb-1 block text-sm font-medium text-gray-700">Tamaño</label>
                                             <p class="text-gray-600">{{ version.tamaño_archivo }}</p>
                                         </div>
                                     </div>
@@ -86,7 +86,7 @@
                                         <svg class="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
-                                        Version {{ versiones.length - index }}
+                                        Versión {{ versiones.length - index }}
                                     </div>
                                 </div>
 
@@ -120,7 +120,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                         <h3 class="mb-2 text-lg font-medium text-gray-900">No hay versiones disponibles</h3>
-                        <p class="mb-4 text-gray-500">Este proyecto aun no tiene versiones de documentos subidas.</p>
+                        <p class="mb-4 text-gray-500">Este proyecto aún no tiene versiones del documento.</p>
                         <Link
                             :href="route('proyectos.show', proyecto.id)"
                             class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-blue-700"
@@ -172,7 +172,7 @@ const formatDate = (date) => new Date(date).toLocaleDateString('es-ES', {
 });
 
 const confirmDeleteVersion = (versionId, fileName) => {
-    if (confirm(`¿Estas seguro de que quieres eliminar la version "${fileName}"?\n\nEsta accion no se puede deshacer.`)) {
+    if (confirm(`¿Estás seguro de que quieres eliminar la versión «${fileName}»?\n\nEsta acción no se puede deshacer.`)) {
         deleteVersion(versionId);
     }
 };
@@ -184,11 +184,11 @@ const deleteVersion = (versionId) => {
     router.delete(route('versiones.delete', versionId), {
         preserveScroll: true,
         onSuccess: () => {
-            feedbackMessage.value = 'Version eliminada exitosamente.';
+            feedbackMessage.value = 'Versión eliminada correctamente.';
             router.reload({ only: ['versiones', 'flash'] });
         },
         onError: () => {
-            errorMessage.value = 'No se pudo eliminar la version.';
+            errorMessage.value = 'No se pudo eliminar la versión.';
         },
     });
 };

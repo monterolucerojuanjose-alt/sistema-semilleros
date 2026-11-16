@@ -25,9 +25,46 @@ class ReporteController extends Controller
 {
     use \App\Support\NumeracionPdf;
 
+    /**
+     * Filtros que respeta cada tipo de reporte, y a qué fecha se refiere el
+     * rango «desde/hasta» en cada uno.
+     *
+     * Antes la pantalla dejaba elegir cualquier filtro con cualquier reporte y
+     * el documento lo anunciaba como aplicado aunque la consulta lo ignorara
+     * (un reporte de semilleros decía «Evento: …» sin filtrar por evento). Los
+     * filtros que no aplican se descartan aquí, y la pantalla recibe esta
+     * misma tabla para mostrar sólo los que tienen efecto.
+     */
+    public const FILTROS_POR_TIPO = [
+        'semilleros' => ['semillero_id', 'estado', 'fecha_inicio', 'fecha_fin'],
+        'proyectos' => ['evento_id', 'semillero_id', 'estado', 'fecha_inicio', 'fecha_fin'],
+        'eventos' => ['evento_id', 'estado', 'fecha_inicio', 'fecha_fin'],
+        'inscripciones' => ['evento_id', 'semillero_id', 'estado', 'tipo', 'fecha_inicio', 'fecha_fin'],
+        'evaluaciones' => ['evento_id', 'semillero_id', 'estado', 'fecha_inicio', 'fecha_fin'],
+        'participantes' => ['evento_id', 'semillero_id', 'estado', 'fecha_inicio', 'fecha_fin'],
+    ];
+
+    public const FECHA_POR_TIPO = [
+        'semilleros' => 'fecha de creación del semillero',
+        'proyectos' => 'fecha de registro del proyecto',
+        'eventos' => 'fecha de inicio del evento',
+        'inscripciones' => 'fecha de inscripción',
+        'evaluaciones' => 'fecha de evaluación',
+        'participantes' => 'fecha de registro del usuario',
+    ];
+
     public function __construct()
     {
         $this->middleware('auth');
+    }
+
+    /** Conserva sólo los filtros con valor que el tipo de reporte respeta. */
+    private function filtrosAplicables(string $tipoReporte, array $filtros): array
+    {
+        return array_filter(
+            array_intersect_key($filtros, array_flip(self::FILTROS_POR_TIPO[$tipoReporte] ?? [])),
+            fn ($valor) => $valor !== null && $valor !== ''
+        );
     }
 
     /**
@@ -65,6 +102,8 @@ class ReporteController extends Controller
             'eventos' => $eventos,
             'estadosPorTipo' => $estadosPorTipo,
             'tipos' => $tipos,
+            'filtrosPorTipo' => self::FILTROS_POR_TIPO,
+            'fechaPorTipo' => self::FECHA_POR_TIPO,
         ]);
     }
 
@@ -90,8 +129,11 @@ class ReporteController extends Controller
             'tipo' => 'nullable|string',
         ]);
 
-        $filtros = $request->only(['fecha_inicio', 'fecha_fin', 'semillero_id', 'evento_id', 'estado', 'tipo']);
         $tipoReporte = $request->tipo_reporte;
+        $filtros = $this->filtrosAplicables(
+            $tipoReporte,
+            $request->only(['fecha_inicio', 'fecha_fin', 'semillero_id', 'evento_id', 'estado', 'tipo'])
+        );
         $formato = $request->formato;
 
         if ($formato === 'pdf') {
@@ -113,7 +155,10 @@ class ReporteController extends Controller
             'datos' => $registros,
             'agrupado_por_programa' => $agrupado,
             'filtros' => $filtros,
-            'fecha_generacion' => now()->format('d/m/Y H:i:s'),
+            'filtros_aplicados' => \App\Support\Etiquetas::filtrosAplicados($filtros),
+            'indicadores' => $this->indicadores($tipoReporte, collect($registros)),
+            'logo' => \App\Support\RecursosPdf::logo(),
+            'fecha_generacion' => now()->format('d/m/Y \a \l\a\s H:i'),
         ])->setPaper('A4', 'landscape');
 
         $nombreArchivo = 'reporte_' . $tipoReporte . '_' . now()->format('Y_m_d_H_i_s') . '.pdf';
@@ -128,22 +173,83 @@ class ReporteController extends Controller
     {
         $nombreArchivo = 'reporte_' . $tipoReporte . '_' . now()->format('Y_m_d_H_i_s') . '.xlsx';
 
-        switch ($tipoReporte) {
-            case 'semilleros':
-                return Excel::download(new SemillerosExport($filtros), $nombreArchivo);
-            case 'proyectos':
-                return Excel::download(new ProyectosExport($filtros), $nombreArchivo);
-            case 'eventos':
-                return Excel::download(new EventosExport($filtros), $nombreArchivo);
-            case 'inscripciones':
-                return Excel::download(new InscripcionesExport($filtros), $nombreArchivo);
-            case 'evaluaciones':
-                return Excel::download(new EvaluacionesExport($filtros), $nombreArchivo);
-            case 'participantes':
-                return Excel::download(new ParticipantesExport($filtros), $nombreArchivo);
-            default:
-                abort(400, 'Tipo de reporte no válido');
-        }
+        // El Excel recibe exactamente los mismos registros que el PDF y que la
+        // vista previa. Antes cada exportación repetía su propia consulta y el
+        // Excel de inscripciones y el de participantes ignoraban el filtro de
+        // estado, así que un mismo reporte cambiaba según el formato elegido.
+        [$registros] = $this->separarDatos($this->obtenerDatosReporte($tipoReporte, $filtros));
+        $registros = collect($registros);
+
+        $exportacion = match ($tipoReporte) {
+            'semilleros' => new SemillerosExport($registros, $filtros),
+            'proyectos' => new ProyectosExport($registros, $filtros),
+            'eventos' => new EventosExport($registros, $filtros),
+            'inscripciones' => new InscripcionesExport($registros, $filtros),
+            'evaluaciones' => new EvaluacionesExport($registros, $filtros),
+            'participantes' => new ParticipantesExport($registros, $filtros),
+            default => abort(400, 'Tipo de reporte no válido'),
+        };
+
+        return Excel::download($exportacion, $nombreArchivo);
+    }
+
+    /**
+     * Cifras de resumen que encabezan el PDF: cuatro indicadores por tipo de
+     * reporte, para que quien lo lea entienda el panorama sin contar filas.
+     *
+     * @return array<int, array{etiqueta: string, valor: string|int}>
+     */
+    private function indicadores(string $tipoReporte, $registros): array
+    {
+        $contar = fn (string $campo, array $valores) => $registros
+            ->filter(fn ($r) => in_array(mb_strtolower((string) data_get($r, $campo)), $valores, true))
+            ->count();
+
+        $total = ['etiqueta' => 'Total de registros', 'valor' => $registros->count()];
+
+        return match ($tipoReporte) {
+            'semilleros' => [
+                $total,
+                ['etiqueta' => 'Semilleros activos', 'valor' => $contar('estado', ['activo'])],
+                ['etiqueta' => 'Integrantes', 'valor' => (int) $registros->sum('miembros_aprobados_count')],
+                ['etiqueta' => 'Proyectos', 'valor' => (int) $registros->sum('proyectos_count')],
+            ],
+            'proyectos' => [
+                $total,
+                ['etiqueta' => 'Aprobados', 'valor' => $contar('estado', ['aprobado'])],
+                ['etiqueta' => 'Inscritos o en revisión', 'valor' => $contar('estado', ['en revisión', 'inscrito'])],
+                ['etiqueta' => 'Rechazados', 'valor' => $contar('estado', ['rechazado'])],
+            ],
+            'eventos' => [
+                $total,
+                ['etiqueta' => 'Eventos activos', 'valor' => $contar('estado', ['activo'])],
+                ['etiqueta' => 'Participantes', 'valor' => (int) $registros->sum('participantes_count')],
+                ['etiqueta' => 'Proyectos inscritos', 'valor' => (int) $registros->sum('inscripciones_count')],
+            ],
+            'inscripciones' => [
+                $total,
+                ['etiqueta' => 'Aceptadas', 'valor' => $contar('estado', ['aceptado'])],
+                ['etiqueta' => 'Inscritas o en revisión', 'valor' => $contar('estado', ['en revisión', 'inscrito'])],
+                ['etiqueta' => 'Rechazadas', 'valor' => $contar('estado', ['rechazado'])],
+            ],
+            'evaluaciones' => (function () use ($registros, $total) {
+                $notas = $registros->pluck('nota_final')->filter(fn ($n) => $n !== null)->map(fn ($n) => (float) $n);
+
+                return [
+                    $total,
+                    ['etiqueta' => 'Nota promedio', 'valor' => $notas->isEmpty() ? '—' : \App\Support\Etiquetas::nota($notas->avg())],
+                    ['etiqueta' => 'Nota más alta', 'valor' => $notas->isEmpty() ? '—' : \App\Support\Etiquetas::nota($notas->max())],
+                    ['etiqueta' => 'Nota más baja', 'valor' => $notas->isEmpty() ? '—' : \App\Support\Etiquetas::nota($notas->min())],
+                ];
+            })(),
+            'participantes' => [
+                $total,
+                ['etiqueta' => 'Activos', 'valor' => $registros->filter(fn ($u) => mb_strtolower($u->estado ?? 'activo') === 'activo')->count()],
+                ['etiqueta' => 'Con proyectos', 'valor' => $registros->filter(fn ($u) => ($u->proyectos ?? collect())->isNotEmpty())->count()],
+                ['etiqueta' => 'Sin proyectos', 'valor' => $registros->filter(fn ($u) => ($u->proyectos ?? collect())->isEmpty())->count()],
+            ],
+            default => [$total],
+        };
     }
 
     /**
@@ -361,16 +467,25 @@ class ReporteController extends Controller
             $query->where('estado', $filtros['estado']);
         }
 
+        // Sólo las evaluaciones de proyectos del catálogo: las de propuestas de
+        // evento también usan rúbrica, pero se toman de evento_participantes
+        // en evaluacionesDeEventos() y aquí saldrían repetidas.
+        $query->whereNotNull('proyecto_id');
+
         return $query->get()->map(fn ($e) => [
-            'proyecto' => $e->proyecto->titulo ?? 'N/A',
-            'autor' => $e->proyecto->autor->name ?? 'N/A',
-            'jurado' => $e->jurado->name ?? 'N/A',
+            'proyecto' => $e->proyecto->titulo ?? 'Proyecto eliminado',
+            'autor' => $e->proyecto->autor->name ?? 'Sin autor',
+            'semillero' => $e->proyecto->semillero->nombre ?? 'Sin semillero',
+            'jurado' => $e->jurado->name ?? 'Sin asignar',
             'origen' => $e->rubrica->nombre ?? 'Rúbrica',
             'nota_final' => $e->nota_final,
             'estado' => $e->estado,
+            'observaciones' => $e->observaciones,
             'fecha' => $e->created_at,
             'programa' => $e->proyecto->semillero->linea_tematica ?? null,
-            'modalidad' => null,
+            // La modalidad es propia de las convocatorias de eventos; un
+            // proyecto del catálogo no la tiene.
+            'modalidad' => 'No aplica',
         ]);
     }
 
@@ -405,14 +520,17 @@ class ReporteController extends Controller
 
         return $query->get()->map(fn ($p) => [
             'proyecto' => $p->titulo_proyecto ?: 'Proyecto sin título',
-            'autor' => $p->usuario->name ?? 'N/A',
+            'autor' => $p->usuario->name ?? 'Sin autor',
+            'semillero' => 'Propuesta de evento',
             'jurado' => $p->evaluador->name ?? 'Sin asignar',
-            'origen' => 'Evento: ' . ($p->evento->titulo ?? 'N/A'),
+            'origen' => 'Evento: ' . ($p->evento->titulo ?? 'sin título'),
             'nota_final' => $p->nota_final,
             'estado' => 'Evaluado',
+            'observaciones' => $p->analisis_proyecto,
             'fecha' => $p->fecha_evaluacion ?? $p->updated_at,
             'programa' => $p->programa_reporte,
-            'modalidad' => $p->modalidad,
+            // Las propuestas anteriores a la convocatoria RedCOLSI no la pedían.
+            'modalidad' => $p->modalidad ?: 'Sin registrar',
         ]);
     }
 
@@ -434,11 +552,28 @@ class ReporteController extends Controller
 
             $participantes = $evento->participantes->map(function($participante) {
                 return $participante->usuario;
-            })->filter()->unique('id');
+            })->filter()->unique('id')->sortBy('name')->values();
 
             if (!empty($filtros['estado'])) {
                 $participantes = $participantes->where('estado', $filtros['estado']);
             }
+
+            if (!empty($filtros['semillero_id'])) {
+                $participantes = $participantes->filter(
+                    fn ($u) => $u->proyectos->contains('semillero_id', (int) $filtros['semillero_id'])
+                );
+            }
+
+            // El rango de fechas se refiere a la fecha de registro del usuario.
+            if (!empty($filtros['fecha_inicio'])) {
+                $participantes = $participantes->filter(fn ($u) => $u->created_at?->toDateString() >= $filtros['fecha_inicio']);
+            }
+
+            if (!empty($filtros['fecha_fin'])) {
+                $participantes = $participantes->filter(fn ($u) => $u->created_at?->toDateString() <= $filtros['fecha_fin']);
+            }
+
+            $participantes = $participantes->values();
 
             // Agrupar por programa
             $participantesPorPrograma = $participantes->groupBy(function($user) {
@@ -472,6 +607,14 @@ class ReporteController extends Controller
             $query->where('estado', $filtros['estado']);
         }
 
+        if (!empty($filtros['fecha_inicio'])) {
+            $query->whereDate('created_at', '>=', $filtros['fecha_inicio']);
+        }
+
+        if (!empty($filtros['fecha_fin'])) {
+            $query->whereDate('created_at', '<=', $filtros['fecha_fin']);
+        }
+
         return $query->whereHas('roles', function($q) {
             $q->where('name', 'Estudiante');
         })->orderBy('name')->get();
@@ -488,8 +631,13 @@ class ReporteController extends Controller
             abort(403, 'No tienes permisos para ver reportes.');
         }
 
-        $filtros = $request->only(['fecha_inicio', 'fecha_fin', 'semillero_id', 'evento_id', 'estado', 'tipo']);
-        $tipoReporte = $request->tipo_reporte ?? 'proyectos';
+        $tipoReporte = array_key_exists((string) $request->tipo_reporte, self::FILTROS_POR_TIPO)
+            ? $request->tipo_reporte
+            : 'proyectos';
+        $filtros = $this->filtrosAplicables(
+            $tipoReporte,
+            $request->only(['fecha_inicio', 'fecha_fin', 'semillero_id', 'evento_id', 'estado', 'tipo'])
+        );
 
         [$datosParaVista, $agrupado] = $this->separarDatos(
             $this->obtenerDatosReporte($tipoReporte, $filtros)

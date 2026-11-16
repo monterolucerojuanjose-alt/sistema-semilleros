@@ -200,7 +200,7 @@
             
             <div style="text-align: center;">
                 <a href="{{ url('/inscripciones/' . $inscripcion->id) }}" class="btn">Ver Inscripción</a>
-                <a href="{{ url('/dashboard') }}" class="btn">Ir al Dashboard</a>
+                <a href="{{ url('/dashboard') }}" class="btn">Ir al panel principal</a>
             </div>
         </div>
 

@@ -16,19 +16,15 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  * ⚠️  AVISO IMPORTANTE — CONVIVEN DOS SISTEMAS DE CERTIFICADOS
  *
  *     Este modelo (Certificado → tabla «certificados») es el primero que se
- *     construyó. Hoy lo consultan el panel principal (DashboardController) y
- *     el módulo de informes (ReporteController).
+ *     construyó. El sistema vigente es Certificate (→ tabla «certificates»):
+ *     con él se emiten, listan y descargan los certificados.
  *
- *     Existe además el modelo Certificate (→ tabla «certificates»), que es el
- *     que usa la pantalla de certificados para crear los nuevos.
- *
- *     Consecuencia práctica: los certificados que se emiten desde la pantalla
- *     se guardan en «certificates», pero el panel y los informes cuentan los
- *     de «certificados». Por eso las cifras del panel no reflejan los
- *     certificados recientes.
- *
- *     Ambos modelos están en uso, así que ninguno puede eliminarse sin antes
- *     unificar los datos y reapuntar las consultas. Ver también Certificate.
+ *     El panel principal contaba los de esta tabla antigua, así que mostraba
+ *     «15 certificados emitidos» mientras la pantalla de certificados listaba
+ *     uno. Desde noviembre de 2026 el panel cuenta Certificate. Esta tabla
+ *     sólo conserva datos históricos de ejemplo; ninguna pantalla la muestra.
+ *     Se mantiene el modelo porque la auditoría y User::certificados() aún
+ *     lo referencian.
  *
  * Tabla asociada: certificados
  *

@@ -81,13 +81,13 @@
                 </div>
 
                 <!-- Lista de semilleros -->
-                <div v-if="filteredSemilleros.length > 0" class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <div v-if="filteredSemilleros.length > 0" class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                     <div v-for="semillero in filteredSemilleros" :key="semillero.id"
                          class="tarjeta-interactiva animar-entrada group rounded-xl border border-gray-200 bg-white shadow-sm">
                         <div class="p-6">
                             <!-- Header de la tarjeta -->
                             <div class="flex items-start justify-between mb-4">
-                                <div class="flex-1">
+                                <div class="min-w-0 flex-1">
                                     <h3 class="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors duration-200">
                                         {{ semillero.nombre }}
                                     </h3>

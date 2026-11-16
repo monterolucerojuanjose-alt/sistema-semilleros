@@ -110,7 +110,7 @@
                     >
                         <option value="">Selecciona una rúbrica</option>
                         <option v-for="rubrica in rubricas" :key="rubrica.id" :value="rubrica.id">
-                            {{ rubrica.nombre }} ({{ rubrica.criterios.length }} criterios)
+                            {{ rubrica.nombre }} ({{ rubrica.criterios.length }} {{ rubrica.criterios.length === 1 ? 'criterio' : 'criterios' }})
                         </option>
                     </select>
 
