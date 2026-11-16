@@ -266,6 +266,7 @@ Asegúrese de que `npm run dev` esté en ejecución, o compile los assets con `n
 
 ## Documentación adicional
 
+- [docs/evidencia/](docs/evidencia/README.md) — Evidencia de funcionamiento del prototipo (video del recorrido completo y certificado generado)
 - [docs/INSTALACION.md](docs/INSTALACION.md) — Tutorial de instalación en un computador personal y en un servidor ([versión PDF](docs/Tutorial_de_Instalacion_Sistema_Semilleros.pdf))
 - [docs/manual/Manual_de_Usuario_Sistema_Semilleros.pdf](docs/manual/Manual_de_Usuario_Sistema_Semilleros.pdf) — Manual de usuario
 - [docs/ANEXO_ARQUITECTURA_TESIS.md](docs/ANEXO_ARQUITECTURA_TESIS.md) — Anexo de arquitectura
